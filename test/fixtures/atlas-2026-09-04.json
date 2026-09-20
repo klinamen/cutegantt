@@ -1,0 +1,95 @@
+{
+  "project": "atlas",
+  "title": "Atlas / Customer Platform",
+  "subtitle": "Delivery roadmap / Steering committee",
+  "version": "2026.09.04",
+  "timeline": {
+    "timeUnit": {
+      "duration": "2w",
+      "name": "Sprint"
+    },
+    "origin": "2026-08-31",
+    "visibleRange": {
+      "end": "2026-12-20"
+    }
+  },
+  "tasks": [
+    {
+      "id": "discovery",
+      "group": "01 / Strategy & design",
+      "name": "Discovery e requisiti",
+      "owner": "Product",
+      "start": "2026-08-31",
+      "end": "2026-09-11",
+      "progress": 80
+    },
+    {
+      "id": "experience",
+      "group": "01 / Strategy & design",
+      "name": "Experience e prototipo",
+      "owner": "Design",
+      "start": "2026-09-07",
+      "end": "2026-09-25",
+      "progress": 20
+    },
+    {
+      "id": "design-gate",
+      "group": "01 / Strategy & design",
+      "name": "Approvazione soluzione",
+      "type": "milestone",
+      "date": "2026-09-28"
+    },
+    {
+      "id": "platform",
+      "group": "02 / Build & integration",
+      "name": "Core platform",
+      "owner": "Engineering",
+      "start": "2026-09-14",
+      "end": "2026-10-23",
+      "progress": 0
+    },
+    {
+      "id": "crm",
+      "group": "02 / Build & integration",
+      "name": "Integrazione CRM",
+      "owner": "Integration",
+      "start": "2026-09-28",
+      "end": "2026-10-30",
+      "progress": 0
+    },
+    {
+      "id": "legacy",
+      "group": "02 / Build & integration",
+      "name": "Export legacy",
+      "owner": "Data",
+      "start": "2026-10-05",
+      "end": "2026-10-16",
+      "progress": 0
+    },
+    {
+      "id": "uat",
+      "group": "03 / Launch readiness",
+      "name": "UAT e validazione business",
+      "owner": "Business",
+      "start": "2026-11-02",
+      "end": "2026-11-20",
+      "progress": 0
+    },
+    {
+      "id": "go-live",
+      "group": "03 / Launch readiness",
+      "name": "Go-live",
+      "type": "milestone",
+      "date": "2026-11-23"
+    },
+    {
+      "id": "hypercare",
+      "group": "03 / Launch readiness",
+      "name": "Hypercare",
+      "owner": "Operations",
+      "start": "2026-11-23",
+      "end": "2026-12-04",
+      "progress": 0
+    }
+  ]
+}

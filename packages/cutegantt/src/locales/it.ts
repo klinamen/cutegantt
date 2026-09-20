@@ -1,0 +1,183 @@
+export default {
+  fields: {
+    type: 'Tipo',
+    name: 'Nome',
+    group: 'Area',
+    owner: 'Responsabile',
+    start: 'Inizio',
+    end: 'Fine',
+    date: 'Data',
+    progress: 'Avanzamento',
+    completed: 'Completata',
+    order: 'Ordine',
+  },
+  kind: {
+    added: 'AGGIUNTA',
+    removed: 'RIMOSSA',
+    changed: 'MODIFICATA',
+  },
+  monthLabels: ['GEN', 'FEB', 'MAR', 'APR', 'MAG', 'GIU', 'LUG', 'AGO', 'SET', 'OTT', 'NOV', 'DIC'],
+  errors: {
+    leftSideScale:
+      'style.leftSideScale deve essere una percentuale dal 10% al 50%, ad esempio 20% o 22.5%.',
+    fontScale:
+      'style.fontScale deve essere una percentuale dal 50% al 150%, ad esempio 100% o 112.5%.',
+    height: 'style.height deve essere short, normal o tall.',
+    legacyToday:
+      'Sostituire today con timeline.markers, usando position e label (supporta $position).',
+    holidayEnd: "La fine della festivita precede l'inizio.",
+    dateLocale: 'dateLocale deve essere un locale supportato, come en-GB, it-IT o en-US.',
+    legacyOrigin: 'Rinominare timeline.start in timeline.origin.',
+    legacyEnd: 'Sostituire timeline.end con timeline.visibleRange.end.',
+    unitIndex: '{{label}}: usare un indice di unita intero positivo entro i limiti di precisione.',
+    beforeOrigin: '{{label}} non deve precedere timeline.origin.',
+    legacyTimeline:
+      'Campo timeline rimosso. Usare timeline.timeUnit.duration e timeline.timeUnit.name nel file di input.',
+    duration:
+      'La durata deve usare d o w (es. 1d, 5d, 2w, 1w 2d) e corrispondere a 1-3660 giorni di calendario interi.',
+    unitName: "Il nome dell'unita temporale deve contenere da 1 a 80 caratteri.",
+    language: 'Lingua non supportata: {{lang}}. Usare en o it.',
+    dateFormat: '{{label}}: usare il formato YYYY-MM-DD.',
+    dateInvalid: '{{label}}: data non valida ({{value}}).',
+    required: '{{label}}: testo obbligatorio.',
+    plan: 'Documento di piano non valido.',
+    tasks: 'tasks deve contenere almeno una voce.',
+    item: 'tasks[{{index}}] non valida.',
+    duplicate: 'ID duplicato: {{id}}.',
+    type: '{{id}}: type deve essere task o milestone.',
+    end: "{{id}}: la fine precede l'inizio.",
+    progress: '{{id}}: progress deve essere un numero tra 0 e 100.',
+    changeNotes: 'changeNotes deve associare ID a testi.',
+    project: 'Le versioni appartengono a progetti diversi.',
+    timeline: 'La fine del range visibile precede il suo inizio.',
+    ticks: 'Troppi intervalli: aumentare timeline.timeUnit.duration nel file di input.',
+    range: 'Intervallo temporale fuori dai limiti supportati.',
+    diff: 'Il diff richiede una versione precedente.',
+    width: 'width deve essere tra 1000 e 8000.',
+    theme: 'theme deve essere light o dark.',
+    density:
+      'Scala troppo densa: aumentare --width o timeline.timeUnit.duration nel file di input.',
+    notes: 'notes deve essere inline o separate.',
+  },
+  schema: {
+    leftSideScale:
+      'Larghezza del pannello task dal 10% al 50% della larghezza totale, esclusi margine esterno e separatore. Se omessa conserva la larghezza adattiva. I testi vanno a capo senza puntini e le altezze si adattano al contenuto. Indipendente da fontScale; densita temporale eccessiva rifiutata.',
+    truncateUnits:
+      "Booleano facoltativo, false per default. Nasconde etichette, bande e linee delle unita interamente successive all'ultimo task o milestone. L'unita contenente la fine progetto resta interamente visibile entro la vista. Non modifica visibleRange, estensione automatica, mesi, settimane o posizioni dei task. Nei confronti include l'estensione della baseline.",
+    fontScale:
+      "Scala tipografica in percentuale dal 50% al 150%, anche decimale. Default 100% conserva l'aspetto attuale. Testo e spazi proporzionali scalano insieme; larghezza finale invariata, ritorni a capo e altezza adattati. Si applica al grafico e alle note separate.",
+    height:
+      "Densita verticale del grafico: short minimizza padding e spazi tra gruppi, normal mantiene la spaziatura standard (default), tall aumenta lo spazio. Font e contenuti restano invariati; testi su piu righe, milestone e confronti conservano lo spazio necessario. Non e un'altezza fissa in pixel. Il registro separato delle variazioni mantiene il proprio layout.",
+    schemaTitle: 'Schema di input del piano di progetto',
+    schemaDescription:
+      "Input del piano (JSON o YAML parsato), non modello normalizzato. I campi sconosciuti vengono scartati; i campi legacy vietati vengono rifiutati. I testi vengono privati degli spazi esterni. I default JSON Schema sono annotazioni, non inseriscono valori. L'applicazione verifica inoltre date reali, ID univoci dopo il trim, ordine delle date, vincoli dell'origine, risoluzione sicura degli indici fino al 9999-12-31, locale supportati e totali delle durate. Il rendering verifica larghezza, tema, estensione e densita. Usare la CLI per validare completamente un piano.",
+    project:
+      'Identificatore obbligatorio del progetto, condiviso dalle versioni confrontate. Non vuoto dopo il trim.',
+    title: 'Titolo obbligatorio non vuoto dopo il trim. Il testo utente non viene tradotto.',
+    subtitle:
+      'Sottotitolo utente facoltativo, mantenuto in modalita relativa; se omesso viene generato automaticamente.',
+    version:
+      'Etichetta facoltativa della versione. Usata nelle intestazioni automatiche, omessa in modalita relativa.',
+    dateLocale:
+      'Locale Intl supportato facoltativo, ad esempio en-US. Default en-GB in inglese, it-IT in italiano. Cambia solo la visualizzazione; calendario gregoriano UTC e dati ISO restano invariati.',
+    tasks:
+      'Lista ordinata non vuota di task e milestone. ID univoci dopo il trim. Tipo omesso significa task. Gli indici vengono normalizzati in date ISO.',
+    id: 'Identificatore stabile obbligatorio, univoco nel piano dopo il trim; collega gli elementi tra versioni.',
+    name: 'Nome visibile obbligatorio non vuoto. Il nome della time unit ha default Sprint e massimo 80 caratteri dopo il trim; i nomi degli elementi vanno a capo.',
+    type: 'task oppure milestone. Se omesso vale task; una milestone richiede il tipo esplicito.',
+    group:
+      'Nome del gruppo facoltativo non vuoto; omesso/null significa senza gruppo e senza intestazione. Ordine per prima apparizione.',
+    owner:
+      'Responsabile facoltativo. Le stringhe vengono ripulite dagli spazi esterni; valori mancanti o non stringa diventano stringa vuota.',
+    note: 'Nota utente facoltativa. Le stringhe vengono ripulite; valori mancanti o non stringa diventano stringa vuota. Usata nelle variazioni se non esiste un override.',
+    start:
+      "Data ISO o indice positivo di unita a base 1 (intero o stringa di cifre, ad esempio 2 o 02). Inizio = origin + (indice-1) * durata. Non puo precedere origin. In visibleRange ritaglia esattamente; se omesso l'inizio della vista e automatico.",
+    end: 'Fine inclusiva ISO o indice positivo di unita. Fine = origin + indice * durata - 1 giorno. Non puo precedere inizio o origin. In visibleRange ritaglia esattamente; se omessa la fine della vista e automatica. Indici rappresentabili esattamente e date risolte entro i limiti supportati.',
+    date: "Data ISO della milestone o indice positivo di unita, risolto all'inizio dell'unita. Non puo precedere origin. Ammesse stringhe numeriche; zero, negativi, frazioni e indici non sicuri sono rifiutati.",
+    progress:
+      "Progresso del task da 0 a 100. Omesso/null diventa 0. L'avanzamento ponderato di progetto/gruppo esclude milestone e usa tutti i giorni di calendario, non l'effort.",
+    completed:
+      'Stato esplicito di completamento della milestone; default false. La data prevista non implica completamento. I cambiamenti compaiono nel diff.',
+    timeline:
+      'Configurazione temporale obbligatoria con origine assoluta. Calcoli UTC; weekend e festivita non spostano i task.',
+    origin:
+      "Data reale ISO obbligatoria YYYY-MM-DD. Inizio dell'unita 1 e della settimana relativa 1. Ogni baseline risolve gli input con la propria origine.",
+    timeUnit:
+      'Unita facoltativa di durata fissa in giorni di calendario. Default durata 2w e nome Sprint, anche se uno dei campi e omesso.',
+    duration:
+      'Durata con token d e w, ad esempio 5d, 2w, 1w 2d. Massimo 80 caratteri dopo il trim e totale intero tra 1 e 3660 giorni. Niente mesi variabili o altre unita. Verifica applicativa; default 2w.',
+    showWeekNumbers:
+      "Booleano facoltativo, disattivato per default. Aggiunge settimane ISO sotto i mesi, o settimane dall'origine in modalita relativa. Etichette diradate nelle viste dense.",
+    relativeTime:
+      "Booleano facoltativo, disattivato per default. Mostra mesi per anniversario M1, M2 e settimane precise w2 d3. Prima dell'origine usa giorni con segno. Testi utente e dati ISO restano invariati. Override CLI relative-time/no-relative-time.",
+    markers:
+      'Marker facoltativi; nessuno implicito. Si mostrano solo quelli del piano corrente. Quelli fuori vista sono nascosti senza estendere la timeline.',
+    position:
+      'Data ISO, indice positivo di unita (inizio) oppure today. Date assolute dei marker anche precedenti a origin. today usa la data locale del computer al rendering e resta letterale nel modello. Indici sicuri e date risolte entro i limiti supportati.',
+    label:
+      'Label obbligatoria non vuota. Ogni $position diventa la data formattata o il riferimento relativo. Altri testi restano invariati, senza suffisso automatico. Va a capo evitando collisioni.',
+    visibleRange:
+      "Limiti start/end facoltativi indipendenti. Quelli omessi usano l'estensione automatica, inclusa la baseline nel diff. Oggetto vuoto automatico. Il ritaglio conserva righe, progresso e numerazione; il range effettivo non puo essere invertito.",
+    style:
+      'Impostazioni di rendering facoltative; omesso/null diventa oggetto vuoto. Le opzioni CLI corrispondenti prevalgono.',
+    width:
+      'Numero o stringa numerica facoltativa; il renderer richiede un valore finito tra 1000 e 8000 pixel. Default di rendering 1600. Il modello accetta scalari piu ampi dei vincoli di rendering.',
+    theme:
+      'Scalare facoltativo; il renderer accetta light o dark, default light. Entrambi i temi SVG sono trasparenti.',
+    font: 'Famiglia di caratteri facoltativa; default di rendering Aptos, Segoe UI, sans-serif. Font non incorporati.',
+    groupSummary:
+      "Booleano facoltativo, disattivato per default. Mostra estensione del gruppo corrente e progresso ponderato per durata. Milestone incluse nell'estensione ma escluse dalla percentuale. Override CLI group-summary/no-group-summary.",
+    changeNotes:
+      'Mappa facoltativa da ID elemento a nota utente; omesso/null diventa mappa vuota. Prevale sulle note degli elementi nel registro variazioni.',
+    today: 'Campo legacy vietato. Usare timeline.markers con position e label.',
+    legacyTimeline: 'Campo temporale legacy vietato. Usare origin, visibleRange e timeUnit.',
+  },
+  unset: 'non impostato',
+  task: 'attivita',
+  milestone: 'Milestone',
+  project: 'Progetto',
+  baseline: 'Baseline',
+  current: 'Versione corrente',
+  previous: 'Versione precedente',
+  roadmap: 'Pianificazione di progetto',
+  reviewHeading: 'PROGETTO / REVISIONE VARIAZIONI',
+  roadmapHeading: 'PROGETTO / PIANIFICAZIONE',
+  tasks: 'ATTIVITA',
+  milestones: 'MILESTONE',
+  changes: 'VARIAZIONI',
+  interval: 'INTERVALLO',
+  completedTasks: 'TASK COMPLETATI',
+  overallProgress: 'AVANZAMENTO',
+  milestoneCompleted: 'Completata',
+  milestonePending: 'Non completata',
+  planDuration: 'DURATA PIANO',
+  endDelta: 'SCOSTAMENTO FINE',
+  workstream: 'AREA / DELIVERABLE',
+  reference: 'RIF.',
+  sprint: 'Sprint',
+  sprintShort: 'S',
+  weekShort: 'W',
+  month: 'Mese',
+  planProgress: 'Piano / avanzamento',
+  register: 'REGISTRO VARIAZIONI',
+  registerTitle: 'registro variazioni',
+  comparison: 'Confronto',
+  comparisonTitle: 'confronto versioni',
+  note: 'Nota',
+  noChanges: 'Nessuna variazione',
+  noChangesDetail: 'Nessuna variazione nelle attivita o nelle milestone.',
+  references_one: '{{count}} riferimento',
+  references_other: '{{count}} riferimenti',
+  changeReferences_one: '{{count}} variazione / riferimenti nel registro',
+  changeReferences_other: '{{count}} variazioni / riferimenti nel registro',
+  notesDescription_one: '{{count}} variazione con lo stesso riferimento del Gantt diff.',
+  notesDescription_other: '{{count}} variazioni con gli stessi riferimenti del Gantt diff.',
+  chartDescription: 'Voci: {{items}}. Variazioni: {{changes}}. Periodo: {{start}} / {{end}}.',
+  reordered: 'Posizione nella sequenza modificata',
+  fieldChange: '{{field}}: {{before}} -> {{after}}',
+  dateDelta: ' ({{delta}} gg)',
+  addedDetail: 'Aggiunta alla pianificazione',
+  removedDetail: 'Rimossa dalla pianificazione',
+  dateDetail: 'Data: {{date}}',
+  periodDetail: 'Periodo: {{start}} -> {{end}}',
+};

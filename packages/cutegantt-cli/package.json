@@ -1,0 +1,35 @@
+{
+  "name": "cutegantt-cli",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Node CLI for cutegantt JSON and YAML plans",
+  "engines": {
+    "node": ">=24"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/main.d.ts",
+      "import": "./dist/main.js"
+    }
+  },
+  "types": "./dist/main.d.ts",
+  "files": [
+    "dist"
+  ],
+  "bin": {
+    "cutegantt": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "prepack": "npm run build"
+  },
+  "dependencies": {
+    "commander": "15.0.0",
+    "cutegantt": "1.0.0",
+    "yaml": "2.9.1"
+  },
+  "bundleDependencies": [
+    "cutegantt"
+  ]
+}

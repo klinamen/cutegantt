@@ -1,0 +1,181 @@
+export default {
+  fields: {
+    type: 'Type',
+    name: 'Name',
+    group: 'Workstream',
+    owner: 'Owner',
+    start: 'Start',
+    end: 'End',
+    date: 'Date',
+    progress: 'Progress',
+    completed: 'Completed',
+    order: 'Order',
+  },
+  kind: {
+    added: 'ADDED',
+    removed: 'REMOVED',
+    changed: 'CHANGED',
+  },
+  monthLabels: ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'],
+  errors: {
+    leftSideScale:
+      'style.leftSideScale must be a percentage from 10% to 50%, such as 20% or 22.5%.',
+    fontScale: 'style.fontScale must be a percentage from 50% to 150%, such as 100% or 112.5%.',
+    height: 'style.height must be short, normal or tall.',
+    legacyToday:
+      'Replace today with timeline.markers, using position and label (supports $position).',
+    holidayEnd: 'Holiday end precedes start.',
+    dateLocale: 'dateLocale must be a supported locale tag, such as en-GB, it-IT or en-US.',
+    legacyOrigin: 'Rename timeline.start to timeline.origin.',
+    legacyEnd: 'Replace timeline.end with timeline.visibleRange.end.',
+    unitIndex: '{{label}}: use a positive safe integer time unit index.',
+    beforeOrigin: '{{label}} must not precede timeline.origin.',
+    legacyTimeline:
+      'Removed timeline field. Use timeline.timeUnit.duration and timeline.timeUnit.name in the input file.',
+    duration:
+      'Duration must use d or w (e.g. 1d, 5d, 2w, 1w 2d) and total 1 to 3660 whole calendar days.',
+    unitName: 'Time unit name must contain 1 to 80 characters.',
+    language: 'Unsupported language: {{lang}}. Use en or it.',
+    dateFormat: '{{label}}: use YYYY-MM-DD format.',
+    dateInvalid: '{{label}}: invalid date ({{value}}).',
+    required: '{{label}}: text is required.',
+    plan: 'Invalid plan document.',
+    tasks: 'tasks must contain at least one item.',
+    item: 'tasks[{{index}}] is invalid.',
+    duplicate: 'Duplicate ID: {{id}}.',
+    type: '{{id}}: type must be task or milestone.',
+    end: '{{id}}: end precedes start.',
+    progress: '{{id}}: progress must be a number between 0 and 100.',
+    changeNotes: 'changeNotes must map IDs to text.',
+    project: 'The versions belong to different projects.',
+    timeline: 'The visible range end precedes its start.',
+    ticks: 'Too many intervals: increase timeline.timeUnit.duration in the input file.',
+    range: 'Timeline exceeds the supported date range.',
+    diff: 'Diff requires a previous version.',
+    width: 'width must be between 1000 and 8000.',
+    theme: 'theme must be light or dark.',
+    density: 'Scale too dense: increase --width or timeline.timeUnit.duration in the input file.',
+    notes: 'notes must be inline or separate.',
+  },
+  schema: {
+    leftSideScale:
+      'Task-label panel width as 10% to 50% of total chart width, excluding outer margin and gap. If omitted, preserves the existing adaptive width. Labels wrap without ellipsis and row heights adapt to content. Independent of fontScale; excessive timeline density is rejected.',
+    truncateUnits:
+      'Optional boolean, false by default. Hides time-unit labels, bands and grid lines for units wholly after the last task or milestone. The unit containing the project end remains visible in full within the viewport. Does not change visibleRange, automatic extent, months, weeks or task positions. Comparisons include baseline extent.',
+    fontScale:
+      'Typographic scale as a percentage from 50% to 150%, including decimals. Default 100% preserves the existing appearance. Text and proportional layout spacing scale together; final width stays fixed, wrapping and height adapt. Applies to charts and separate notes.',
+    height:
+      'Vertical chart density: short minimizes row padding and group gaps, normal preserves standard spacing (default), tall adds breathing room. Fonts and content are retained; wrapped text, milestones and comparisons reserve the space they need. This is not a fixed pixel height. Separate change notes retain their own layout.',
+    schemaTitle: 'Project plan input schema',
+    schemaDescription:
+      'Raw plan input (JSON or parsed YAML), not the normalized model. Unknown properties are discarded; explicitly forbidden legacy fields are rejected. Text is trimmed. JSON Schema defaults are annotations and do not insert values. Application validation additionally checks real calendar dates, unique trimmed IDs, date ordering, origin constraints, safe unit resolution through 9999-12-31, supported locales and duration totals. Rendering checks width, theme, timeline extent and density. Use the CLI to fully validate a plan.',
+    project:
+      'Required project identifier, shared by versions compared in a diff. Nonempty after trimming.',
+    title: 'Required chart title, nonempty after trimming. User text is not translated.',
+    subtitle:
+      'Optional user subtitle. Preserved in relative mode; otherwise an automatic subtitle is generated.',
+    version: 'Optional version label. Used in automatic headings, suppressed in relative mode.',
+    dateLocale:
+      'Optional supported Intl locale, e.g. en-US. Default en-GB for English, it-IT for Italian. Affects display only; UTC Gregorian dates and ISO model values are unchanged.',
+    tasks:
+      'Nonempty ordered list of tasks and milestones. IDs must be unique after trimming. Omitted type means task. Input indices normalize to ISO dates.',
+    id: 'Required stable identifier, unique within the plan after trimming; used to match versions.',
+    name: 'Required nonempty display name. Time-unit names default to Sprint and have a trimmed maximum of 80 characters; item names wrap as needed.',
+    type: 'task or milestone. Defaults to task when omitted; milestone requires an explicit type.',
+    group:
+      'Optional nonempty group name; missing/null means ungrouped and produces no group header. Groups follow first appearance.',
+    owner:
+      'Optional owner text. Strings are trimmed; missing or nonstring input normalizes to an empty string.',
+    note: 'Optional user note. Strings are trimmed; missing or nonstring input normalizes to an empty string. Used in change notes when no override exists.',
+    start:
+      'ISO date or positive 1-based unit index (integer or digit string, e.g. 2 or 02). Unit start = origin + (index-1) * duration. Must not precede origin. Visible-range start clips exactly; omitted range start is automatic.',
+    end: 'Inclusive ISO end date or positive unit index. Unit end = origin + index * duration - 1 day. Must be on/after start and origin. Visible-range end clips exactly; omitted range end is automatic. Indices must be safely representable and resolve within supported dates.',
+    date: 'Milestone ISO date or positive unit index, resolved to the unit beginning. Must not precede origin. Numeric strings are accepted; zero, negative, fractional and unsafe indices are rejected.',
+    progress:
+      'Task progress from 0 to 100. Missing/null becomes 0. Duration-weighted project/group progress excludes milestones and includes all calendar days, not effort.',
+    completed:
+      'Explicit milestone completion state; defaults to false. Scheduled date does not imply completion. State changes appear in diffs.',
+    timeline:
+      'Required timeline configuration with an absolute origin. Calendar arithmetic is UTC; weekends and holidays do not shift tasks.',
+    origin:
+      'Required real ISO calendar date YYYY-MM-DD. Beginning of time unit 1 and relative week 1. Each baseline resolves its own input against its own origin.',
+    timeUnit:
+      'Optional fixed calendar-day unit. Defaults to duration 2w and name Sprint, including when either field is omitted.',
+    duration:
+      'Duration using d and w tokens, e.g. 5d, 2w, 1w 2d. Trimmed input must be at most 80 characters and total an integer 1..3660 days. No variable calendar months or other units. Validated by the application; default 2w.',
+    showWeekNumbers:
+      'Optional boolean, off by default. Adds ISO weeks below months, or origin-relative weeks when relativeTime is enabled. Dense labels are thinned.',
+    relativeTime:
+      'Optional boolean, off by default. Displays anniversary months M1, M2 and exact relative weeks w2 d3. Pre-origin dates use signed days. User text and structured ISO data remain unchanged. CLI relative-time/no-relative-time overrides this setting.',
+    markers:
+      'Optional reference markers; none are implicit. Only current-plan markers are rendered. Offscreen markers are hidden and do not extend the timeline.',
+    position:
+      'ISO date, positive unit index (beginning of unit), or today. Absolute marker dates may precede origin. today is resolved to the machine-local date at rendering and retained literally in the model. Indices must be safe and resolve within supported dates.',
+    label:
+      'Required nonempty marker label. Every $position is replaced with the formatted date or relative reference. Other user text is preserved, with no automatic suffix. Labels wrap and avoid collisions.',
+    visibleRange:
+      'Optional independent start/end limits. Omitted bounds use automatic extent including the baseline in diffs. Empty object is automatic. Clipping preserves rows, progress and anchored numbering; effective range must not be reversed.',
+    style:
+      'Optional rendering settings; missing/null normalizes to an empty object. Corresponding CLI options override these values.',
+    width:
+      'Optional number or numeric string; renderer requires a finite value from 1000 to 8000 pixels. Rendering default 1600. Model scalar acceptance is broader than renderer validation.',
+    theme:
+      'Optional scalar; renderer accepts light or dark, default light. Both SVG themes are transparent.',
+    font: 'Optional font-family value; rendering default Aptos, Segoe UI, sans-serif. Fonts are not embedded.',
+    groupSummary:
+      'Optional boolean, off by default. Shows current-group span and duration-weighted progress. Milestones affect span but not percentage. CLI group-summary/no-group-summary overrides it.',
+    changeNotes:
+      'Optional map from item ID to user note; missing/null becomes an empty map. Overrides item notes in the change register.',
+    today: 'Forbidden legacy field. Use timeline.markers with position and label instead.',
+    legacyTimeline:
+      'Forbidden legacy timeline field. Use origin, visibleRange and timeUnit instead.',
+  },
+  unset: 'not set',
+  task: 'task',
+  milestone: 'Milestone',
+  project: 'Project',
+  baseline: 'Baseline',
+  current: 'Current version',
+  previous: 'Previous version',
+  roadmap: 'Project roadmap',
+  reviewHeading: 'PROJECT DELIVERY / CHANGE REVIEW',
+  roadmapHeading: 'PROJECT DELIVERY / ROADMAP',
+  tasks: 'TASKS',
+  milestones: 'MILESTONES',
+  changes: 'CHANGES',
+  interval: 'INTERVAL',
+  completedTasks: 'COMPLETED TASKS',
+  overallProgress: 'PROGRESS',
+  milestoneCompleted: 'Completed',
+  milestonePending: 'Not completed',
+  planDuration: 'PLAN DURATION',
+  endDelta: 'END SHIFT',
+  workstream: 'WORKSTREAM / DELIVERABLE',
+  reference: 'REF.',
+  sprint: 'Sprint',
+  sprintShort: 'S',
+  weekShort: 'W',
+  month: 'Month',
+  planProgress: 'Plan / progress',
+  register: 'CHANGE LOG',
+  registerTitle: 'change log',
+  comparison: 'Comparison',
+  comparisonTitle: 'version comparison',
+  note: 'Note',
+  noChanges: 'No changes',
+  noChangesDetail: 'No changes to tasks or milestones.',
+  references_one: '{{count}} reference',
+  references_other: '{{count}} references',
+  changeReferences_one: '{{count}} change / see change log',
+  changeReferences_other: '{{count}} changes / see change log',
+  notesDescription_one: '{{count}} change with the same reference as the Gantt diff.',
+  notesDescription_other: '{{count}} changes with the same references as the Gantt diff.',
+  chartDescription: 'Items: {{items}}. Changes: {{changes}}. Period: {{start}} / {{end}}.',
+  reordered: 'Position in sequence changed',
+  fieldChange: '{{field}}: {{before}} -> {{after}}',
+  dateDelta: ' ({{delta}} days)',
+  addedDetail: 'Added to the plan',
+  removedDetail: 'Removed from the plan',
+  dateDetail: 'Date: {{date}}',
+  periodDetail: 'Period: {{start}} -> {{end}}',
+};

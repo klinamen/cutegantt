@@ -1,0 +1,105 @@
+{
+  "project": "atlas",
+  "title": "Atlas / Customer Platform",
+  "subtitle": "Delivery roadmap / Steering committee",
+  "version": "2026.09.18",
+  "dateLocale": "it-IT",
+  "timeline": {
+    "timeUnit": {
+      "duration": "2w",
+      "name": "Sprint"
+    },
+    "origin": "2026-08-31",
+    "visibleRange": {
+      "end": "2026-12-20"
+    }
+  },
+  "changeNotes": {
+    "discovery": "Requisiti consolidati e condivisi con gli stakeholder.",
+    "experience": "Recepiti i feedback del workshop; finestra di approvazione invariata.",
+    "crm": "Ambiente sandbox disponibile una settimana dopo il previsto. Confermare la nuova finestra con il fornitore.",
+    "legacy": "Export rimosso dal perimetro: il cliente mantiene il processo esistente.",
+    "security": "Aggiunto un controllo di sicurezza prima della validazione business."
+  },
+  "tasks": [
+    {
+      "id": "discovery",
+      "group": "01 / Strategy & design",
+      "name": "Discovery e requisiti",
+      "owner": "Product",
+      "start": "2026-08-31",
+      "end": "2026-09-11",
+      "progress": 100
+    },
+    {
+      "id": "experience",
+      "group": "01 / Strategy & design",
+      "name": "Experience e prototipo",
+      "owner": "Design",
+      "start": "2026-09-07",
+      "end": "2026-09-25",
+      "progress": 65
+    },
+    {
+      "id": "design-gate",
+      "group": "01 / Strategy & design",
+      "name": "Approvazione soluzione",
+      "type": "milestone",
+      "date": "2026-09-28"
+    },
+    {
+      "id": "platform",
+      "group": "02 / Build & integration",
+      "name": "Core platform",
+      "owner": "Engineering",
+      "start": "2026-09-14",
+      "end": "2026-10-23",
+      "progress": 15
+    },
+    {
+      "id": "crm",
+      "group": "02 / Build & integration",
+      "name": "Integrazione CRM",
+      "owner": "Integration",
+      "start": "2026-10-05",
+      "end": "2026-11-06",
+      "progress": 0
+    },
+    {
+      "id": "security",
+      "group": "02 / Build & integration",
+      "name": "Security assessment",
+      "owner": "Security",
+      "start": "2026-10-26",
+      "end": "2026-11-06",
+      "progress": 0
+    },
+    {
+      "id": "uat",
+      "group": "03 / Launch readiness",
+      "name": "UAT e validazione business",
+      "owner": "Business",
+      "start": "2026-11-09",
+      "end": "2026-11-27",
+      "progress": 0,
+      "note": "UAT ripianificata dopo l'integrazione CRM e il controllo di sicurezza."
+    },
+    {
+      "id": "go-live",
+      "group": "03 / Launch readiness",
+      "name": "Go-live",
+      "type": "milestone",
+      "date": "2026-11-30",
+      "note": "Proposta di nuova data da approvare nello steering committee."
+    },
+    {
+      "id": "hypercare",
+      "group": "03 / Launch readiness",
+      "name": "Hypercare",
+      "owner": "Operations",
+      "start": "2026-11-30",
+      "end": "2026-12-11",
+      "progress": 0
+    }
+  ]
+}

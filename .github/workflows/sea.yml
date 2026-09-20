@@ -1,0 +1,79 @@
+name: SEA Binaries
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sea-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: SEA ${{ matrix.target }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15-intel
+            target: darwin-x64
+          - runner: macos-15
+            target: darwin-arm64
+          - runner: ubuntu-24.04
+            target: linux-x64
+          - runner: ubuntu-24.04-arm
+            target: linux-arm64
+    env:
+      SEA_TARGET: ${{ matrix.target }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Verify native runtime target
+        run: |
+          node --input-type=module -e 'import assert from "node:assert/strict"; assert.equal(`${process.platform}-${process.arch}`, process.env.SEA_TARGET); console.log(process.version, process.env.SEA_TARGET);'
+      - name: Install dependencies
+        run: npm ci
+      - name: Build standalone executable
+        run: npm run build:sea
+      - name: Formatting, lint and typecheck
+        run: npm run check
+      - name: Core and CLI regression tests
+        run: node --test test/gantt.test.mjs
+      - name: Test the distributable without Node on PATH
+        env:
+          CUTEGANTT_SEA_BINARY: dist/sea/${{ matrix.target }}/cutegantt
+        run: npm run test:sea
+      - name: Archive tested binary and record checksum
+        run: |
+          mkdir -p dist/artifacts
+          tar -czf "dist/artifacts/cutegantt-${SEA_TARGET}.tar.gz" -C "dist/sea/${SEA_TARGET}" cutegantt
+          node --input-type=module <<'NODE'
+          import { createHash } from 'node:crypto';
+          import { readFileSync, writeFileSync } from 'node:fs';
+          const filename = `cutegantt-${process.env.SEA_TARGET}.tar.gz`;
+          const digest = createHash('sha256').update(readFileSync(`dist/artifacts/${filename}`)).digest('hex');
+          writeFileSync(`dist/artifacts/${filename}.sha256`, `${digest}  ${filename}\n`);
+          writeFileSync(`dist/artifacts/build-${process.env.SEA_TARGET}.json`, JSON.stringify({
+            target: process.env.SEA_TARGET, node: process.version, commit: process.env.GITHUB_SHA,
+          }, null, 2) + '\n');
+          NODE
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cutegantt-${{ matrix.target }}
+          path: dist/artifacts/*
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14

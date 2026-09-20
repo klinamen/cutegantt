@@ -1,0 +1,27 @@
+{
+  "name": "cutegantt",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Browser-safe typed Gantt models, comparisons and SVG rendering",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "prepack": "npm run build"
+  },
+  "dependencies": {
+    "i18next": "26.4.2",
+    "parse-duration": "2.1.8",
+    "zod": "4.6.5"
+  }
+}

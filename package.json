@@ -1,0 +1,40 @@
+{
+  "name": "cutegantt-workspace",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/cutegantt",
+    "packages/cutegantt-cli"
+  ],
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "lint": "eslint . --max-warnings 0",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check": "npm run format:check && npm run lint && npm run typecheck",
+    "build:sea": "node scripts/build-sea.mjs",
+    "test:sea": "node --test test/sea.test.mjs",
+    "build": "npm run build -w cutegantt && npm run build -w cutegantt-cli",
+    "typecheck": "npm run typecheck -w cutegantt && npm run typecheck -w cutegantt-cli",
+    "test": "npm run build && node --test test/*.test.mjs",
+    "test:browser": "node --test test/browser.test.mjs",
+    "test:parity": "node --test test/parity.test.mjs",
+    "pack:cli": "node scripts/pack-cli.mjs",
+    "test:pack": "node --test test/pack.test.mjs"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@types/node": "^24.0.0",
+    "esbuild": "0.28.2",
+    "eslint": "10.11.0",
+    "eslint-config-prettier": "10.1.8",
+    "globals": "17.12.0",
+    "playwright": "1.63.0",
+    "postject": "1.0.0-alpha.6",
+    "prettier": "3.9.8",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.70.0"
+  }
+}
