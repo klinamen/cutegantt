@@ -33,9 +33,7 @@ interface CommandOptions {
 
 function createCommand() {
   return new Command('cutegantt')
-    .description(
-      'Generate beautiful SVG Gantt charts and change reports from JSON or YAML plans.',
-    )
+    .description('Generate beautiful SVG Gantt charts and change reports from JSON or YAML plans.')
     .exitOverride()
     .argument('[input]', 'Plan file (.json, .yaml or .yml); omit with --schema')
     .option('--schema', 'Print JSON Schema instead of rendering a plan')
