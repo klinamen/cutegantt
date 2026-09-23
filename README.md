@@ -279,3 +279,13 @@ The [SEA workflow](.github/workflows/sea.yml) builds and tests macOS x64/ARM64 a
 ## License
 
 CuteGantt is distributed under the **GNU Affero General Public License v3.0**. See [LICENSE](LICENSE) for the full terms.
+
+## Human-driven. AI-made.
+
+This project embraces a sustainable approach to AI-assisted software development: AI is a tool, not a replacement for engineering expertise.
+
+AI can accelerate implementation, exploration, and repetitive work, while the software engineer remains at the center of the process — providing direction, experience, critical thinking, creativity, and professional judgment.
+
+Human-driven. AI-made. means using AI to amplify craftsmanship, not replace it.
+
+We believe the future of software engineering is not about removing humans from the loop, but about giving skilled engineers better tools to build thoughtful, maintainable, and responsible software.
