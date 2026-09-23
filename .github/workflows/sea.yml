@@ -54,6 +54,8 @@ jobs:
         run: npm run check
       - name: Core and CLI regression tests
         run: node --test test/gantt.test.mjs
+      - name: Installer regression tests
+        run: sh -n install.sh && node --test test/install.test.mjs
       - name: Test the distributable without Node on PATH
         env:
           CUTEGANTT_SEA_BINARY: dist/sea/${{ matrix.target }}/cutegantt
@@ -89,6 +91,7 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v4
       - name: Download tested build artifacts
         uses: actions/download-artifact@v4
         with:
@@ -100,4 +103,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           RELEASE_TAG: ${{ github.event.release.tag_name }}
-        run: gh release upload "$RELEASE_TAG" dist/artifacts/*
+        run: |
+          gh release upload "$RELEASE_TAG" dist/artifacts/*
+          gh release upload "$RELEASE_TAG" install.sh

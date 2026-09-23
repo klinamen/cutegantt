@@ -1,6 +1,6 @@
 # cutegantt workspace
 
-The Node project root is this directory, `src/cutegantt`. Run npm commands here, not in the enclosing repository or `src` directory. Node.js >=24 is required for development and the CLI.
+The Node project root is this directory, `src/cutegantt`. Run npm commands here, not in the enclosing repository or `src` directory. Node.js >=24 is required for development and the npm CLI; standalone release binaries include their own runtime.
 
 ```text
 src/cutegantt/
@@ -40,7 +40,7 @@ npm run test:browser
 npm run test:pack
 ```
 
-`npm test` builds and runs 66 top-level tests: all 58 migrated legacy cases plus 1 Commander regression, 3 parity, 2 architecture/browser, 1 isolated packaging and 1 SEA test. The parity suite reads the unchanged legacy implementation in `../../gantt`; it requires its original dependencies to be available. The packaging suite uses temporary directories outside the workspace, npm's registry/cache and the installed TypeScript compiler. Chromium is required by the browser suite. The SEA test builds a native executable and requires `codesign` on macOS. Tests do not inspect or constrain the independent sibling app directory.
+`npm test` builds and runs the migrated legacy cases, Commander regression, parity, architecture/browser, isolated packaging, SEA and installer tests. The parity suite reads the unchanged legacy implementation in `../../gantt`; it requires its original dependencies to be available. The packaging suite uses temporary directories outside the workspace, npm's registry/cache and the installed TypeScript compiler. Chromium is required by the browser suite. The SEA test builds a native executable and requires `codesign` on macOS. Tests do not inspect or constrain the independent sibling app directory.
 
 ## Package Boundaries
 
@@ -97,7 +97,7 @@ The SEA test copies the executable into an isolated temporary directory, runs it
 
 ## GitHub Actions SEA Builds
 
-The workflow `.github/workflows/sea.yml` belongs to this repository: publish the contents of `src/cutegantt` as the Git repository root, not the enclosing project. It runs on pushes, pull requests and manual dispatch, with four native targets:
+The workflow `.github/workflows/sea.yml` belongs to this repository: publish the contents of `src/cutegantt` as the Git repository root, not the enclosing project. It runs on pushes, pull requests, manual dispatch and published releases, with four native targets:
 
 | Target              | GitHub runner      |
 | ------------------- | ------------------ |
@@ -108,11 +108,37 @@ The workflow `.github/workflows/sea.yml` belongs to this repository: publish the
 
 Each job installs Node 24 and locked dependencies, checks the runtime architecture, builds the SEA, runs `npm run check` (formatting, lint and typecheck) and all 59 core/CLI regression tests, then tests the exact distributable with Node absent from PATH. `CUTEGANTT_SEA_BINARY=dist/sea/darwin-arm64/cutegantt npm run test:sea` selects an existing binary instead of rebuilding it.
 
-Successful jobs upload `cutegantt-<platform>-<arch>` artifacts containing a `.tar.gz`, SHA-256 checksum and build metadata (Node version and commit). The archive preserves executable permissions. Artifacts are retained for 14 days; no GitHub Release or npm publication occurs. Extract the archive before running `cutegantt`.
+Successful jobs upload `cutegantt-<platform>-<arch>` artifacts containing a `.tar.gz`, SHA-256 checksum and build metadata (Node version and commit). The archive preserves executable permissions. Artifacts are retained for 14 days. For a published release, a separate job waits for every target, attaches those files to the release, then uploads `install.sh` from the release tag. Existing release assets are not overwritten. No release is created and no npm publication occurs. Extract the archive before running `cutegantt`, or use the installer below.
 
 These Linux builds target glibc, not Alpine/musl; compatibility with older distributions is not tested. macOS artifacts use ad-hoc signing without notarization. Windows is not included. Browser, packaging and legacy-parity suites remain separate local commands; this workflow does not require the external legacy `gantt` directory.
 
 The workflow has been prepared locally but has not been executed on GitHub. Other target binaries are produced and validated only when their jobs run successfully; local validation so far covers macOS ARM64.
+
+## Install From a GitHub Release
+
+After a release containing `install.sh` and all four binary archives has finished building, install the latest stable release with:
+
+```sh
+curl --proto '=https' --proto-redir '=https' -fsSL https://github.com/klinamen/cutegantt/releases/latest/download/install.sh | sh
+```
+
+To inspect the script first and install a specific release, replace `v1.2.3` with an existing tag:
+
+```sh
+curl --proto '=https' --proto-redir '=https' -fsSL -o install.sh https://github.com/klinamen/cutegantt/releases/download/v1.2.3/install.sh
+less install.sh
+sh install.sh --version v1.2.3
+```
+
+The options also work with piped input: append `sh -s -- --version v1.2.3 --dir "$HOME/bin"` instead of `sh`. `--version` is an exact release tag (letters, digits, dots, underscores and hyphens), including the `v` prefix if present. Without it, the installer resolves the latest release once and downloads both files from that same tag. `--dir` defaults to `$HOME/.local/bin`; no `sudo`, Node.js or shell-profile edits are needed. The installer prints the directory to add to `PATH` if necessary. Run `cutegantt --help` after installation. Re-running the installer upgrades or replaces the binary; remove that binary to uninstall.
+
+Supported targets are macOS Intel/Apple Silicon and Linux x64/ARM64 with glibc. Windows and Alpine/musl are rejected. Linux still needs a glibc/OS version compatible with the downloaded Node runtime; older distributions are not guaranteed to work. Requirements are a POSIX shell, curl, tar with gzip support, standard filesystem utilities, and either `sha256sum` or `shasum`; Linux detection also uses `getconf`. macOS binaries remain ad-hoc signed, not notarized.
+
+Downloads use HTTPS with bounded timeouts. SHA-256 and the archive member name are checked before extraction; only the `cutegantt` file is streamed into a temporary staging directory. The executable must successfully run `--help` before an atomic replacement in the destination directory. Download, checksum and runtime failures leave the existing binary intact; temporary files are cleaned up. Symlink or directory destinations are rejected. Checksums detect corruption but are not independent publisher signatures: the script, archive and checksum share the GitHub trust boundary.
+
+Release assets become available after publication, so an installation attempted while builds are running can fail with an unavailable-asset error; retry after the workflow completes. The installer is hosted as a GitHub release asset, not at `cutegantt.app/install.sh`. Local changes do not make that download URL available until the updated workflow and script are included in a published release tag.
+
+Run `node --test test/install.test.mjs` for the offline installer suite. It uses isolated directories, mocked platform detection and mocked curl responses to cover all four target mappings, both checksum utilities, piped arguments, explicit/latest versions, paths with spaces and failure preservation. It does not send network requests or install into the developer's home. The same tests run on each native SEA CI runner; they do not replace tests of the actual SEA binary.
 
 ## Implementation References
 
