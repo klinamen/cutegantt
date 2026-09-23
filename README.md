@@ -119,13 +119,13 @@ The workflow has been prepared locally but has not been executed on GitHub. Othe
 After a release containing `install.sh` and all four binary archives has finished building, install the latest stable release with:
 
 ```sh
-curl --proto '=https' --proto-redir '=https' -fsSL https://github.com/klinamen/cutegantt/releases/latest/download/install.sh | sh
+curl -fsSL https://github.com/klinamen/cutegantt/releases/latest/download/install.sh | sh
 ```
 
 To inspect the script first and install a specific release, replace `v1.2.3` with an existing tag:
 
 ```sh
-curl --proto '=https' --proto-redir '=https' -fsSL -o install.sh https://github.com/klinamen/cutegantt/releases/download/v1.2.3/install.sh
+curl -fsSL -o install.sh https://github.com/klinamen/cutegantt/releases/download/v1.2.3/install.sh
 less install.sh
 sh install.sh --version v1.2.3
 ```
