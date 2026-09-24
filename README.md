@@ -1,5 +1,10 @@
 # CuteGantt
 
+[![Release](https://img.shields.io/github/v/release/klinamen/cutegantt?style=flat&color=blue)](https://github.com/klinamen/cutegantt/releases/latest)
+[![Build](https://github.com/klinamen/cutegantt/actions/workflows/sea.yml/badge.svg?branch=main&event=push)](https://github.com/klinamen/cutegantt/actions/workflows/sea.yml?query=branch%3Amain+event%3Apush)
+[![License: AGPL v3](https://img.shields.io/badge/license-AGPL_v3-lightgrey?style=flat)](LICENSE)
+[![Try online](https://img.shields.io/badge/try-online-d90c52?style=flat)](https://cutegantt.app/)
+
 **Gantt charts as code, ready for presentations.**
 CuteGantt turns YAML or JSON project plans into SVG Gantt charts. Keep your plans in version control, generate charts from the command line, and compare revisions to show what changed: dates, milestones, progress and scope.
 
