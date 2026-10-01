@@ -34,9 +34,11 @@ export {
   resolveTimeUnit,
   makeTimeline,
   renderSvg,
+  renderSvgPages,
   renderMarkdown,
 } from './render.js';
 export type { Change, RenderOptions, RenderResult, Timeline } from './render.js';
+export type { PaginatedRenderOptions, PaginatedRenderResult, RenderPage } from './render.js';
 export { calendarIntervals, mergeIntervals } from './calendar.js';
 export type { Interval, CalendarInterval } from './calendar.js';
 export {

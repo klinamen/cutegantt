@@ -166,6 +166,7 @@ export default {
   note: 'Nota',
   noChanges: 'Nessuna variazione',
   noChangesDetail: 'Nessuna variazione nelle attivita o nelle milestone.',
+  noPageChanges: 'Nessuna variazione nelle attivita di questa pagina.',
   references_one: '{{count}} riferimento',
   references_other: '{{count}} riferimenti',
   changeReferences_one: '{{count}} variazione / riferimenti nel registro',

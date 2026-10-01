@@ -67,6 +67,22 @@ Use `--no-header` to omit the visible title, subtitle, summary metrics and heade
 cutegantt plans/current.yaml --no-header
 ```
 
+### Pagination
+
+`--page-size <count>` limits activities per SVG page. It accepts a non-negative safe integer and defaults to `0`, which disables pagination. `--pages <selection>` defaults to `0` (all pages); use `p` for one page or `p-q` for an inclusive range, numbered from 1. Decimal digits only are accepted; invalid, reversed or out-of-bounds selections fail before writing files. With pagination disabled, only `0`, `1` and `1-1` are valid selections.
+
+```sh
+cutegantt plans/current.yaml --page-size 10 --pages 2-4 --no-header
+```
+
+Every chart page repeats the full timeline. Tasks, milestones and removed comparison rows each count as one activity; group headings and baseline overlays do not. Pages follow the existing group-first display order, repeating group headings where a group continues. Colors, group summaries and header metrics remain global. Heights depend on content rather than a paper format.
+
+Paginated charts are named `current_1.svg`, `current_2.svg`, or `current_1.diff.svg` for comparisons. The numeric suffix is present even for a single page when `--page-size` is positive. Selecting pages preserves their original numbers. With `--page-size 0`, the existing filenames remain unchanged.
+
+Clean and diff are paginated independently because removed rows may add pages to the comparison. In `--mode both`, an explicit selection must exist in both outputs. Inline notes follow the activities on each page with global change numbers. The single `current.notes.svg` register and `current.changes.md`/`.json` reports always cover the complete comparison; the separate register has no timeline and is not paginated.
+
+All output paths are checked before writing. Shared notes and reports also participate in overwrite checks for partial exports. `--force` overwrites only the emitted files and does not delete stale pages or unselected files.
+
 Timeline origin, unit duration/name, visible range, markers, week numbers, truncation and date locale are configured in the input, not new flags. Removed legacy flags remain rejected. Commander still validates syntax and option choices when `--help` is present. CLI help and diagnostics no longer use the core language catalogs.
 
 Clean mode writes `<stem>.svg`. Diff mode writes `<stem>.diff.svg`, `<stem>.changes.md`, `<stem>.changes.json` and, unless inline notes are requested, `<stem>.notes.svg`. Both mode also writes the clean chart. Only the last input extension is removed from the stem. Paths and the selected baseline are reported on stdout; errors go to stderr with exit code 1. Existing output files are protected unless `--force` is given.

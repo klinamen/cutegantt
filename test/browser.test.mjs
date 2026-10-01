@@ -4,7 +4,7 @@ import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { build } from 'esbuild';
 import { chromium } from 'playwright';
-import { renderSvg } from 'cutegantt';
+import { renderSvg, renderSvgPages } from 'cutegantt';
 
 const root = new URL('../', import.meta.url);
 const manifest = (relative) => JSON.parse(readFileSync(new URL(relative, root), 'utf8'));
@@ -113,6 +113,140 @@ test('headerless charts and notes keep visible text inside the SVG on desktop an
           assert.ok(result.height > 0);
           assert.ok(result.topGap >= 0 && result.topGap < 60);
           assert.ok((await page.screenshot()).length > 1000);
+        }
+      }
+      await page.close();
+    }
+  } finally {
+    await browser.close();
+  }
+});
+
+test('pagination repeats timeline and group styling without clipping on desktop and mobile', async () => {
+  const browser = await chromium.launch({ headless: true });
+  const input = {
+    project: 'pagination',
+    title: 'Paginated project',
+    timeline: {
+      origin: '2026-09-01',
+      showWeekNumbers: true,
+      truncateUnits: true,
+      visibleRange: { start: '2026-09-01', end: '2026-10-31' },
+      markers: [{ position: '2026-09-10', label: 'Review' }],
+    },
+    tasks: [
+      { id: 'alpha', name: 'Work Alpha', group: 'First', start: 1, end: 2, progress: 50 },
+      { id: 'beta', name: 'Work Beta', group: 'Second', start: 1, end: 3, progress: 10 },
+      {
+        id: 'release',
+        name: 'Work Release',
+        group: 'First',
+        type: 'milestone',
+        date: '2026-10-01',
+      },
+      { id: 'gamma', name: 'Work Gamma', group: 'First', start: 2, end: 3, progress: 80 },
+    ],
+  };
+  const previous = {
+    ...input,
+    tasks: input.tasks.map((task) => (task.id === 'alpha' ? { ...task, end: 1 } : task)),
+  };
+  try {
+    for (const viewport of [
+      { width: 1440, height: 900 },
+      { width: 390, height: 844 },
+    ]) {
+      const page = await browser.newPage({ viewport });
+      for (const fontScale of ['50%', '150%']) {
+        for (const header of [false, true]) {
+          for (const notes of ['inline', 'separate']) {
+            const current = { ...input, style: { fontScale, groupSummary: true } };
+            const options = {
+              header,
+              previous,
+              diff: true,
+              notes,
+              shadeWeekends: true,
+              width: 1600,
+            };
+            const whole = renderSvg(current, options);
+            const paginated = renderSvgPages(current, { ...options, pageSize: 2 });
+            const inspect = async (source) => {
+              await page.setContent(
+                `<style>svg { max-width: 100%; height: auto; }</style>${source}`,
+              );
+              return page.evaluate(() => {
+                const svg = document.querySelector('svg');
+                const bounds = svg.getBoundingClientRect();
+                const texts = [...svg.querySelectorAll('text')];
+                const axisY =
+                  Number(svg.querySelector('[data-marker="line"]').getAttribute('y1')) + 5;
+                const axisBottom = axisY + 24 + 56;
+                const entries = (selected) =>
+                  selected.map((text) => ({
+                    text: text.textContent,
+                    x: text.getAttribute('x'),
+                    y: text.getAttribute('y'),
+                    fill: text.getAttribute('fill'),
+                  }));
+                return {
+                  timeline: entries(
+                    texts.filter(
+                      (text) =>
+                        Number(text.getAttribute('y')) >= axisY &&
+                        Number(text.getAttribute('y')) <= axisBottom,
+                    ),
+                  ),
+                  colors: texts
+                    .filter((text) => ['FIRST', 'SECOND'].includes(text.textContent))
+                    .map((text) => [text.textContent, text.getAttribute('fill')]),
+                  summaries: [...svg.querySelectorAll('[data-group-summary="span"]')].map(
+                    (element) => [
+                      element.getAttribute('x'),
+                      element.getAttribute('width'),
+                      element.getAttribute('fill'),
+                    ],
+                  ),
+                  outside: texts
+                    .filter((text) => {
+                      const box = text.getBoundingClientRect();
+                      return (
+                        box.top < bounds.top - 1 ||
+                        box.bottom > bounds.bottom + 1 ||
+                        box.left < bounds.left - 1 ||
+                        box.right > bounds.right + 1
+                      );
+                    })
+                    .map((text) => text.textContent),
+                  width: bounds.width,
+                  height: bounds.height,
+                  text: svg.textContent,
+                };
+              });
+            };
+            const expected = await inspect(whole.svg);
+            for (const rendered of paginated.pages) {
+              const actual = await inspect(rendered.svg);
+              assert.deepEqual(actual.timeline, expected.timeline);
+              assert.ok(actual.timeline.length > 5);
+              for (const color of actual.colors)
+                assert.ok(
+                  expected.colors.some((entry) => JSON.stringify(entry) === JSON.stringify(color)),
+                );
+              for (const summary of actual.summaries)
+                assert.ok(
+                  expected.summaries.some(
+                    (entry) => JSON.stringify(entry) === JSON.stringify(summary),
+                  ),
+                );
+              assert.deepEqual(actual.outside, []);
+              assert.ok(actual.width > 0 && actual.width <= viewport.width);
+              assert.ok(actual.height > 0);
+              assert.ok(actual.text.includes('FIRST'));
+              assert.equal(actual.text.includes('SECOND'), rendered.page === 2);
+              assert.ok((await page.screenshot()).length > 1000);
+            }
+          }
         }
       }
       await page.close();

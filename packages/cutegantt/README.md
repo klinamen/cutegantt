@@ -28,6 +28,26 @@ Pass `header: false` to `renderSvg` to omit the visible title, subtitle, summary
 const { svg } = renderSvg(current, { header: false });
 ```
 
+## Paginated Rendering
+
+`renderSvgPages` accepts `PaginatedRenderOptions`, which extends `RenderOptions` with `pageSize` and `pages`. Its `PaginatedRenderResult` contains `pages: RenderPage[]`, the total `pageCount` before selection, all `changes`, and a complete `notesSvg` for comparisons. Each page has `{ page, svg, width, height }`.
+
+```ts
+import { renderSvgPages } from 'cutegantt';
+
+const output = renderSvgPages(current, {
+  pageSize: 10,
+  pages: 0,
+  header: false,
+});
+```
+
+`pageSize` defaults to `0` (one unpaginated chart); positive safe integers limit the number of activities per page. `pages` defaults to `0` (all pages), accepts a positive 1-based page number, or `{ from: 2, to: 4 }` for an inclusive range. Invalid sizes, reversed ranges and nonexistent pages throw before returning output. With pagination disabled only `0`, `1` and `{ from: 1, to: 1 }` select a valid page. Returned page numbers retain their original values.
+
+Tasks, milestones and removed comparison rows each count as one activity. Group headings and baseline overlays do not count. Pages follow the existing group-first display order; groups may span pages and repeat their headings, colors and full-plan summaries. Every chart page retains the complete timeline, markers and overall metrics. Page height adapts to its content, not a fixed paper size.
+
+Inline notes contain only changes for activities on that page, retaining global reference numbers. Separate notes and the returned changes always cover the complete comparison, even when selecting a subset of pages. `renderSvg` and its single-chart contract remain unchanged. Pagination is a runtime option, not a plan-schema field.
+
 The public entrypoint exports model classes, validation schemas, `planJsonSchema`, comparison/rendering functions, calendar helpers and translation/date-formatting functions. `Task` and `Milestone` form a discriminated union. `ProjectPlan.toJSON()` returns normalized plan data; model instances remain mutable and `ProjectPlan.from(existingInstance)` retains identity. Validation failures preserve `translationKey`, `parameters`, `path`, `issues` and `cause`.
 
 ```ts

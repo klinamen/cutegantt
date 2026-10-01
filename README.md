@@ -207,6 +207,18 @@ Run `cutegantt --help` for the full option reference. Add `--no-header` to omit 
 | `--force`                                | Overwrite existing outputs                                                 |
 | `--schema`                               | Print JSON Schema; accepts `--lang` but no input file or rendering options |
 
+### Paginate Charts
+
+```sh
+cutegantt launch.yaml --page-size 10 --pages 2-4 --no-header
+```
+
+`--page-size` sets the maximum activities per SVG page; `0` (default) disables pagination. `--pages` accepts `0` (default, all pages), a positive page number, or an inclusive range `p-q`. Pages start at 1; invalid or nonexistent selections fail before writing files.
+
+The full timeline repeats on each chart page. Tasks, milestones and removed comparison rows count toward the limit, while group headings do not. Groups can continue onto the next page with their heading repeated. The display order, colors, global metrics and group summaries are preserved.
+
+Paginated filenames use `launch_1.svg`, `launch_2.svg`, and `launch_1.diff.svg` for comparisons, even if pagination produces only one page. Disabled pagination retains the original names. Clean and diff are paginated independently; an explicit selection in `--mode both` must exist in both. Inline notes follow their page; separate notes and Markdown/JSON reports remain complete and unpaginated. `--force` does not delete old or unselected pages. See the [CLI reference](packages/cutegantt-cli/README.md#pagination) for details.
+
 ## Use as a Library
 
 The `cutegantt` core is a typed ESM library for Node.js and browser applications. It exposes plan models, validation, comparison, SVG rendering, Markdown reports and JSON Schema generation without relying on the filesystem or Node.js built-ins at runtime.
@@ -233,6 +245,8 @@ const { svg } = renderSvg(plan, { theme: 'light', lang: 'en' });
 ```
 
 `svg` is a string that your application can save or display. Pass `header: false` to `renderSvg` to omit the visible header; it is enabled by default. YAML parsing and file handling belong to the CLI; library consumers provide JavaScript objects. See the [public exports](packages/cutegantt/src/index.ts) for the API and its TypeScript types.
+
+For paginated rendering, use `renderSvgPages(plan, { pageSize: 10, pages: 0 })`. It returns numbered SVG pages, the total page count, full comparison changes and optional separate notes. Select a range with `pages: { from: 2, to: 4 }`; `renderSvg` retains its existing single-chart API. See the [library reference](packages/cutegantt/README.md#paginated-rendering).
 
 To package the library from a checkout, run `npm run build` followed by `npm pack --workspace cutegantt`, then install the generated tarball in your consuming project.
 

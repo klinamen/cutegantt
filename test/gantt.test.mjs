@@ -1,6 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync, readFileSync, existsSync } from 'node:fs';
+import {
+  mkdtempSync,
+  mkdirSync,
+  writeFileSync,
+  rmSync,
+  readFileSync,
+  existsSync,
+  readdirSync,
+} from 'node:fs';
 import { createRequire } from 'node:module';
 import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
@@ -26,6 +34,7 @@ import {
   comparePlans,
   makeTimeline,
   renderSvg,
+  renderSvgPages,
   renderMarkdown,
 } from 'cutegantt';
 
@@ -46,6 +55,14 @@ test('Commander provides English help, validates choices and throws without exit
     assert.throws(() => main(args), { code });
   assert.throws(() => main(['--schema', '--mode=clean']), { code: 'cutegantt.error' });
   assert.throws(() => main(['--schema', '--no-header']), { code: 'cutegantt.error' });
+  assert.throws(() => main(['--schema', '--page-size=0']), { code: 'cutegantt.error' });
+  assert.throws(() => main(['--schema', '--pages=0']), { code: 'cutegantt.error' });
+  for (const value of ['-1', '1.5', '1e2', '', '9007199254740992']) {
+    assert.throws(() => main([`--page-size=${value}`]), { code: 'commander.invalidArgument' });
+    assert.throws(() => main([`--pages=${value}`]), { code: 'commander.invalidArgument' });
+  }
+  for (const value of ['0-0', '0-2', '2-1', '1-', '1,2', '1-2-3'])
+    assert.throws(() => main([`--pages=${value}`]), { code: 'commander.invalidArgument' });
   assert.throws(() => main(['--schema', '--no-relative-time']), { code: 'cutegantt.error' });
   assert.throws(() => main(['--schema', '--no-group-summary', '--group-summary']), {
     code: 'cutegantt.error',
@@ -77,6 +94,8 @@ test('Commander provides English help, validates choices and throws without exit
     assert.match(help.stdout, /Usage:/);
     assert.match(help.stdout, /-h, --help/);
     assert.match(help.stdout, /--no-header/);
+    assert.match(help.stdout, /--page-size/);
+    assert.match(help.stdout, /--pages/);
     assert.match(help.stdout, /choices: "clean", "diff", "both"/);
     assert.equal(run(['-h', '--lang=it']).stdout, run(['--help', '--lang=en']).stdout);
     assert.equal(help.stderr, '');
@@ -258,6 +277,271 @@ test('truncateUnits hides only units beyond project extent without changing the 
       () => validatePlan({ ...current.toJSON(), timeline: { ...current.timeline, truncateUnits } }),
       (error) => error.path.join('.') === 'timeline.truncateUnits',
     );
+  }
+});
+
+test('pagination preserves grouped row order, global timeline and metrics', () => {
+  const items = [
+    { ...task, id: 'alpha', name: 'Activity Alpha', group: 'First' },
+    { ...task, id: 'beta', name: 'Activity Beta', group: 'Second' },
+    {
+      id: 'release',
+      type: 'milestone',
+      name: 'Activity Release',
+      date: '2026-10-15',
+      group: 'First',
+    },
+    { ...task, id: 'gamma', name: 'Activity Gamma', group: 'First' },
+  ];
+  const current = plan(items);
+  const previous = plan([
+    ...items,
+    { ...task, id: 'removed', name: 'Activity Removed', group: 'Second' },
+  ]);
+  const options = { previous, diff: true };
+  const whole = renderSvg(current, options);
+  const result = renderSvgPages(current, { ...options, pageSize: 2 });
+  assert.equal(result.pageCount, 3);
+  assert.deepEqual(result.changes, whole.changes);
+  assert.deepEqual(
+    result.pages.map((page) =>
+      [...page.svg.matchAll(/>(Activity [^<]+)<\/text>/g)].map((match) => match[1]),
+    ),
+    [
+      ['Activity Alpha', 'Activity Release'],
+      ['Activity Gamma', 'Activity Beta'],
+      ['Activity Removed'],
+    ],
+  );
+  const summary = (svg) =>
+    [...svg.matchAll(/<text[^>]*data-summary="[^"]+"[^>]*>[^<]*<\/text>/g)].map(
+      (match) => match[0],
+    );
+  for (const page of result.pages) {
+    assert.deepEqual(summary(page.svg), summary(whole.svg));
+    assert.equal(
+      page.svg.match(/<desc[^>]*>(.*?)<\/desc>/)[1],
+      whole.svg.match(/<desc[^>]*>(.*?)<\/desc>/)[1],
+    );
+    assert.ok(page.height < whole.height);
+  }
+  assert.equal(renderSvgPages(current, options).pages[0].svg, whole.svg);
+  assert.deepEqual(
+    renderSvgPages(current, { ...options, pageSize: 2, pages: { from: 2, to: 3 } }).pages,
+    result.pages.slice(1),
+  );
+  assert.deepEqual(
+    renderSvgPages(current, { ...options, pageSize: 2, pages: 3 }).pages,
+    result.pages.slice(2),
+  );
+});
+
+test('pagination validates sizes and ranges and preserves unpaginated output', () => {
+  const current = plan([
+    task,
+    { ...task, id: 'second', name: 'Second' },
+    { ...task, id: 'third', name: 'Third' },
+  ]);
+  for (const pageSize of [-1, 1.5, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1, '2', null])
+    assert.throws(() => renderSvgPages(current, { pageSize }), /pageSize/);
+  for (const pages of [
+    -1,
+    1.5,
+    NaN,
+    Infinity,
+    4,
+    '2',
+    null,
+    {},
+    { from: 0, to: 1 },
+    { from: 2, to: 1 },
+    { from: 1, to: 4 },
+    { from: 1, to: 1.5 },
+  ])
+    assert.throws(() => renderSvgPages(current, { pageSize: 1, pages }), /pages/);
+  assert.throws(() => renderSvgPages(current, { pages: 2 }), /pages/);
+  for (const pages of [0, 1, { from: 1, to: 1 }]) {
+    const result = renderSvgPages(current, { pages });
+    const expected = renderSvg(current);
+    assert.equal(result.pageCount, 1);
+    assert.deepEqual(result.pages, [
+      { page: 1, svg: expected.svg, width: expected.width, height: expected.height },
+    ]);
+  }
+  for (const [pageSize, count] of [
+    [1, 3],
+    [2, 2],
+    [3, 1],
+    [100, 1],
+    [Number.MAX_SAFE_INTEGER, 1],
+  ])
+    assert.equal(renderSvgPages(current, { pageSize }).pageCount, count);
+});
+
+test('pagination inline notes stay local while the separate register and references stay global', () => {
+  const items = Array.from({ length: 3 }, (_, index) => ({
+    ...task,
+    id: `task-${index}`,
+    name: `Work ${index}`,
+  }));
+  const current = plan(items);
+  const previous = plan(
+    items.map((item, index) => (index === 1 ? item : { ...item, end: '2026-09-20' })),
+  );
+  for (const lang of ['en', 'it']) {
+    const result = renderSvgPages(current, {
+      previous,
+      diff: true,
+      notes: 'inline',
+      pageSize: 1,
+      lang,
+    });
+    assert.deepEqual(
+      result.changes.map((change) => change.number),
+      [1, 2],
+    );
+    assert.match(result.pages[0].svg, />01<\/text>/);
+    assert.doesNotMatch(result.pages[0].svg, />02<\/text>|>Work 2<\/text>/);
+    assert.match(result.pages[2].svg, />02<\/text>/);
+    assert.doesNotMatch(result.pages[2].svg, />01<\/text>|>Work 0<\/text>/);
+    assert.match(result.pages[1].svg, new RegExp(translator(lang)('noPageChanges')));
+    for (const name of ['Work 0', 'Work 2']) assert.ok(result.notesSvg.includes(`>${name}</text>`));
+    const selected = renderSvgPages(current, {
+      previous,
+      diff: true,
+      notes: 'inline',
+      pageSize: 1,
+      pages: 2,
+      lang,
+    });
+    assert.equal(selected.pages[0].svg, result.pages[1].svg);
+    for (const name of ['Work 0', 'Work 2'])
+      assert.ok(selected.notesSvg.includes(`>${name}</text>`));
+    const unchanged = renderSvgPages(current, {
+      previous: current,
+      diff: true,
+      notes: 'inline',
+      pageSize: 1,
+      lang,
+    });
+    for (const page of unchanged.pages)
+      assert.ok(page.svg.includes(translator(lang)('noChangesDetail')));
+  }
+});
+
+test('CLI pagination selects original page numbers, preserves reports and validates before writing', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'cutegantt-pagination-'));
+  const cli = fileURLToPath(new URL('../packages/cutegantt-cli/dist/cli.js', import.meta.url));
+  const items = Array.from({ length: 4 }, (_, index) => ({
+    ...task,
+    id: `task-${index}`,
+    name: `Work ${index}`,
+  }));
+  const current = plan(items).toJSON();
+  const previous = join(directory, 'previous.json');
+  const run = (input, output, args = []) => {
+    const result = spawnSync(
+      process.execPath,
+      [cli, input, '--previous', previous, '--out-dir', output, ...args],
+      { encoding: 'utf8' },
+    );
+    assert.ifError(result.error);
+    return result;
+  };
+  try {
+    writeFileSync(
+      previous,
+      JSON.stringify(
+        plan([
+          ...items.map((item) => ({ ...item, end: '2026-09-20' })),
+          { ...task, id: 'removed', name: 'Removed' },
+        ]).toJSON(),
+      ),
+    );
+    for (const extension of ['json', 'yaml']) {
+      const input = join(directory, `current.${extension}`);
+      const source = extension === 'json' ? JSON.stringify(current) : stringify(current);
+      writeFileSync(input, source);
+      for (const mode of ['clean', 'diff', 'both']) {
+        for (const notes of ['inline', 'separate']) {
+          const base = join(directory, `${extension}-${mode}-${notes}`);
+          const args = ['--mode', mode, '--notes', notes, '--no-header'];
+          const baseline = run(input, base, args);
+          assert.equal(baseline.status, 0, baseline.stderr);
+          const output = `${base}-paged`;
+          const result = run(input, output, [...args, '--page-size', '02', '--pages', '1-2']);
+          assert.equal(result.status, 0, result.stderr);
+          const expected = [
+            ...(mode !== 'diff' ? ['current_1.svg', 'current_2.svg'] : []),
+            ...(mode !== 'clean'
+              ? [
+                  'current_1.diff.svg',
+                  'current_2.diff.svg',
+                  'current.changes.md',
+                  'current.changes.json',
+                  ...(notes === 'separate' ? ['current.notes.svg'] : []),
+                ]
+              : []),
+          ];
+          assert.deepEqual(readdirSync(output).sort(), expected.sort());
+          for (const name of expected.filter((name) => name.endsWith('.svg')))
+            assert.doesNotMatch(readFileSync(join(output, name), 'utf8'), /data-summary=/);
+          if (mode !== 'clean') {
+            for (const suffix of ['changes.md', 'changes.json'])
+              assert.equal(
+                readFileSync(join(output, `current.${suffix}`), 'utf8'),
+                readFileSync(join(base, `current.${suffix}`), 'utf8'),
+              );
+            if (notes === 'separate')
+              assert.match(
+                readFileSync(join(output, 'current.notes.svg'), 'utf8'),
+                />Removed<\/text>/,
+              );
+          }
+          const second = `${base}-second`;
+          assert.equal(run(input, second, [...args, '--page-size=2', '--pages=2']).status, 0);
+          assert.ok(
+            !existsSync(join(second, 'current_1.svg')) &&
+              !existsSync(join(second, 'current_1.diff.svg')),
+          );
+        }
+      }
+      assert.equal(readFileSync(input, 'utf8'), source);
+      for (const args of [
+        ['--pages=2'],
+        ['--page-size=1', '--pages=9'],
+        ['--mode=both', '--page-size=2', '--pages=3'],
+        ['--mode=both', '--page-size=2', '--pages=1-3'],
+      ]) {
+        const output = join(directory, 'invalid');
+        const result = run(input, output, args);
+        assert.equal(result.status, 1);
+        assert.match(result.stderr, /pages/);
+        assert.equal(existsSync(output), false);
+      }
+      const all = join(directory, `${extension}-all`);
+      assert.equal(run(input, all, ['--mode=both', '--page-size=2', '--pages=0']).status, 0);
+      assert.ok(existsSync(join(all, 'current_3.diff.svg')));
+      assert.equal(existsSync(join(all, 'current_3.svg')), false);
+      const single = join(directory, `${extension}-single`);
+      assert.equal(run(input, single, ['--page-size=100']).status, 0);
+      assert.deepEqual(readdirSync(single), ['current_1.svg']);
+      const disabled = join(directory, `${extension}-disabled`);
+      assert.equal(run(input, disabled, ['--page-size=0', '--pages=1-1']).status, 0);
+      assert.deepEqual(readdirSync(disabled), ['current.svg']);
+      const collision = join(directory, `${extension}-collision`);
+      mkdirSync(collision);
+      writeFileSync(join(collision, 'current_2.svg'), 'existing');
+      writeFileSync(join(collision, 'current_9.svg'), 'keep');
+      assert.equal(run(input, collision, ['--page-size=2']).status, 1);
+      assert.equal(existsSync(join(collision, 'current_1.svg')), false);
+      assert.equal(readFileSync(join(collision, 'current_2.svg'), 'utf8'), 'existing');
+      assert.equal(run(input, collision, ['--page-size=2', '--pages=2', '--force']).status, 0);
+      assert.equal(existsSync(join(collision, 'current_1.svg')), false);
+      assert.equal(readFileSync(join(collision, 'current_9.svg'), 'utf8'), 'keep');
+    }
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
   }
 });
 

@@ -1,5 +1,5 @@
-import { ProjectPlan, renderSvg, comparePlans, renderMarkdown, projectPlanInputSchema, planJsonSchema } from 'cutegantt';
-import type { ProjectPlanInput, RenderResult, Change, Holiday } from 'cutegantt';
+import { ProjectPlan, renderSvg, renderSvgPages, comparePlans, renderMarkdown, projectPlanInputSchema, planJsonSchema } from 'cutegantt';
+import type { ProjectPlanInput, RenderResult, PaginatedRenderOptions, PaginatedRenderResult, RenderPage, Change, Holiday } from 'cutegantt';
 
 const input = {
   title: 'Consumer', project: 'consumer', timeline: { origin: '2026-09-01' },
@@ -13,6 +13,10 @@ const changes: Change[] = comparePlans(plan, plan);
 const holidays: Holiday[] = [{ start: '2026-09-01', end: '2026-09-02', label: 'Closure' }];
 const result: RenderResult = renderSvg(plan, { holidays, lang: 'it', previous: plan, diff: true, header: false });
 const svg: string = result.svg;
+const pageOptions: PaginatedRenderOptions = { pageSize: 10, pages: { from: 1, to: 1 }, header: false };
+const paginated: PaginatedRenderResult = renderSvgPages(plan, pageOptions);
+const pages: RenderPage[] = paginated.pages;
+const pageCount: number = paginated.pageCount;
 const markdown: string = renderMarkdown(plan, plan, changes);
 const parsed: unknown = projectPlanInputSchema.parse(input);
 const schema: unknown = planJsonSchema();
@@ -26,5 +30,5 @@ type RejectInvalidEndpoint = Assert<{
   tasks: { id: string; name: string; start: boolean; end: number }[];
 } extends ProjectPlanInput ? false : true>;
 type RejectInvalidResult = Assert<RenderResult['svg'] extends number ? false : true>;
-void [svg, markdown, parsed, schema, markerPosition, serializedNotes];
+void [svg, markdown, parsed, schema, markerPosition, serializedNotes, pages, pageCount];
 export type { RejectInvalidEndpoint, RejectInvalidResult };

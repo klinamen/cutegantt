@@ -164,6 +164,7 @@ export default {
   note: 'Note',
   noChanges: 'No changes',
   noChangesDetail: 'No changes to tasks or milestones.',
+  noPageChanges: 'No changes to the activities on this page.',
   references_one: '{{count}} reference',
   references_other: '{{count}} references',
   changeReferences_one: '{{count}} change / see change log',

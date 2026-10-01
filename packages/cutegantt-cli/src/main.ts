@@ -6,10 +6,10 @@ import {
   languages,
   ProjectPlan,
   planJsonSchema,
-  renderSvg,
+  renderSvgPages,
   renderMarkdown,
 } from 'cutegantt';
-import type { PlanError } from 'cutegantt';
+import type { PlanError, PaginatedRenderOptions } from 'cutegantt';
 import { loadPlan, findPrevious, planStem, loadHolidays } from './plan-files.js';
 export { loadPlan, findPrevious, loadHolidays, planStem } from './plan-files.js';
 
@@ -22,6 +22,8 @@ interface CommandOptions {
   relativeTime?: boolean;
   groupSummary?: boolean;
   header: boolean;
+  pageSize: number;
+  pages: PaginatedRenderOptions['pages'];
   holidaysDir?: string;
   shadeWeekends?: boolean;
   holidayLabels?: boolean;
@@ -30,6 +32,27 @@ interface CommandOptions {
   font?: string;
   notes?: string;
   force?: boolean;
+}
+
+function parsePageNumber(value: string): number {
+  const parsed = Number(value);
+  if (!/^\d+$/.test(value) || !Number.isSafeInteger(parsed))
+    throw new InvalidArgumentError('Expected a non-negative safe integer.');
+  return parsed;
+}
+
+function parsePages(value: string): PaginatedRenderOptions['pages'] {
+  if (/^\d+$/.test(value)) return parsePageNumber(value);
+  const match = /^(\d+)-(\d+)$/.exec(value);
+  if (!match)
+    throw new InvalidArgumentError('Expected 0, a page number, or an inclusive range p-q.');
+  const from = parsePageNumber(match[1]);
+  const to = parsePageNumber(match[2]);
+  if (from < 1 || to < from)
+    throw new InvalidArgumentError(
+      'Page ranges must start at 1 or greater and end at or after their start.',
+    );
+  return { from, to };
 }
 
 function createCommand() {
@@ -58,6 +81,18 @@ function createCommand() {
     .option('--group-summary', 'Show group spans and duration-weighted progress')
     .option('--no-group-summary', 'Hide group summaries')
     .option('--no-header', 'Hide SVG title, subtitle and summary metrics')
+    .option(
+      '--page-size <count>',
+      'Maximum activities per SVG page; 0 disables pagination',
+      parsePageNumber,
+      0,
+    )
+    .option(
+      '--pages <selection>',
+      'Pages to render: 0 for all, p or inclusive p-q (numbered from 1)',
+      parsePages,
+      0,
+    )
     .option('--holidays-dir <directory>', 'Directory of annual JSON/YAML holiday calendars')
     .option('--shade-weekends', 'Shade Saturdays and Sundays')
     .option('--holiday-labels', 'Show holiday labels')
@@ -154,6 +189,8 @@ function generateFiles(values: CommandOptions, inputFile: string) {
   const previous = previousFile ? loadPlan(previousFile) : undefined;
   const options = {
     header: values.header,
+    pageSize: values.pageSize,
+    pages: values.pages,
     holidays,
     shadeWeekends: values.shadeWeekends,
     holidayLabels: values.holidayLabels,
@@ -169,13 +206,17 @@ function generateFiles(values: CommandOptions, inputFile: string) {
   const outputDirectory = resolve(values.outDir);
   const stem = planStem(input);
   const files: [string, string][] = [];
-  if (values.mode !== 'diff') files.push([`${stem}.svg`, renderSvg(current, options).svg]);
+  const pageStem = (page: number) => (values.pageSize ? `${stem}_${page}` : stem);
+  if (values.mode !== 'diff') {
+    const result = renderSvgPages(current, options);
+    for (const page of result.pages) files.push([`${pageStem(page.page)}.svg`, page.svg]);
+  }
   if (needsDiff) {
-    const result = renderSvg(current, { ...options, diff: true });
+    const result = renderSvgPages(current, { ...options, diff: true });
     if ((values.notes ?? 'separate') === 'separate' && result.notesSvg !== undefined)
       files.push([`${stem}.notes.svg`, result.notesSvg]);
+    for (const page of result.pages) files.push([`${pageStem(page.page)}.diff.svg`, page.svg]);
     files.push(
-      [`${stem}.diff.svg`, result.svg],
       [
         `${stem}.changes.md`,
         renderMarkdown(
