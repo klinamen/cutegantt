@@ -23,6 +23,7 @@ export interface Change {
 export interface RenderOptions {
   previous?: unknown;
   diff?: boolean;
+  header?: boolean;
   lang?: string;
   width?: string | number;
   theme?: string | number;
@@ -390,7 +391,10 @@ export function renderSvg(
       : (current.subtitle ?? translate('roadmap'))
     : subtitle;
   const subtitleLines = wrapText(displaySubtitle, width - 530, 14);
-  const dividerY = Math.max(144, 83 + titleLines.length * 37 + subtitleLines.length * 19);
+  const showHeader = options.header ?? true;
+  const dividerY = showHeader
+    ? Math.max(144, 83 + titleLines.length * 37 + subtitleLines.length * 19)
+    : 0;
   const today = localToday();
   const markerGroups = new Map<number, Marker>();
   for (const marker of config.markers ?? []) {
@@ -641,82 +645,84 @@ export function renderSvg(
     );
   };
 
-  shape('rect', { x: margin, y: 34, width: 28, height: 4, rx: 2, fill: PALETTE[0] });
-  text(translate(diff ? 'reviewHeading' : 'roadmapHeading'), margin + 40, 41, 11, muted, {
-    'font-weight': 700,
-  });
-  titleLines.forEach((value, index) =>
-    text(value, margin, 88 + index * 37, 32, ink, { 'font-weight': 700 }),
-  );
-  subtitleLines.forEach((value, index) =>
-    text(value, margin, 114 + (titleLines.length - 1) * 37 + index * 19, 14, muted),
-  );
-  const milestoneCount = current.tasks.filter((task) => task.type === 'milestone').length;
-  const taskCount = current.tasks.length - milestoneCount;
-  const completedCount = current.tasks.filter(
-    (task) => task.type !== 'milestone' && task.progress === 100,
-  ).length;
-  const completedMilestones = current.tasks.filter(
-    (task) => task.type === 'milestone' && task.completed,
-  ).length;
-  const work = current.tasks.filter((task) => task.type !== 'milestone');
-  const totalDuration = work.reduce((total, task) => total + taskEnd(task) - taskStart(task), 0);
-  const progress = totalDuration
-    ? work.reduce((total, task) => total + (taskEnd(task) - taskStart(task)) * task.progress, 0) /
-      totalDuration
-    : undefined;
-  const roundedProgress = Math.round(progress ?? 0);
-  const progressLabel =
-    progress === undefined
-      ? 'N/A'
-      : progress > 0 && roundedProgress === 0
-        ? '<1%'
-        : progress < 100 && roundedProgress === 100
-          ? '>99%'
-          : `${roundedProgress}%`;
-  const planEnd = Math.max(...current.tasks.map(taskEnd));
-  const planDays = (planEnd - dateValue(config.origin)) / DAY;
-  const durationText = (days: number) => (days % 7 === 0 ? `${days / 7}w` : `${days}d`);
-  const endDelta = diff ? (planEnd - Math.max(...(previous?.tasks ?? []).map(taskEnd))) / DAY : 0;
-  const summaryLeft = width - 395;
-  const summary = [
-    { key: 'progress', value: progressLabel, label: translate('overallProgress') },
-    {
-      key: 'completed',
-      value: `${completedCount}/${taskCount}`,
-      label: translate('completedTasks'),
-    },
-    {
-      key: 'milestones',
-      value: `${completedMilestones}/${milestoneCount}`,
-      label: translate('milestones'),
-    },
-    { key: 'duration', value: durationText(planDays), label: translate('planDuration') },
-    ...(diff
-      ? [
-          {
-            key: 'endDelta',
-            value: `${endDelta > 0 ? '+' : endDelta < 0 ? '-' : ''}${durationText(Math.abs(endDelta))}`,
-            label: translate('endDelta'),
-            color: endDelta > 0 ? orange : endDelta < 0 ? green : ink,
-          },
-        ]
-      : []),
-  ];
-  const summaryStep = 360 / summary.length;
-  summary.forEach((item, index) => {
-    const left = summaryLeft + index * summaryStep;
-    if (index) line(left - 12, 56, left - 12, 127, rule, { 'stroke-opacity': 0.5 });
-    const valueSize = Math.min(30, (summaryStep - 20) / item.value.length);
-    text(item.value, left, 83, valueSize, item.color ?? ink, {
-      'font-weight': 600,
-      'data-summary': item.key,
+  if (showHeader) {
+    shape('rect', { x: margin, y: 34, width: 28, height: 4, rx: 2, fill: PALETTE[0] });
+    text(translate(diff ? 'reviewHeading' : 'roadmapHeading'), margin + 40, 41, 11, muted, {
+      'font-weight': 700,
     });
-    wrapText(item.label, summaryStep - 20, 10).forEach((value, lineIndex) =>
-      text(value, left, 103 + lineIndex * 12, 10, muted, { 'font-weight': 700 }),
+    titleLines.forEach((value, index) =>
+      text(value, margin, 88 + index * 37, 32, ink, { 'font-weight': 700 }),
     );
-  });
-  line(margin, dividerY, width - margin, dividerY);
+    subtitleLines.forEach((value, index) =>
+      text(value, margin, 114 + (titleLines.length - 1) * 37 + index * 19, 14, muted),
+    );
+    const milestoneCount = current.tasks.filter((task) => task.type === 'milestone').length;
+    const taskCount = current.tasks.length - milestoneCount;
+    const completedCount = current.tasks.filter(
+      (task) => task.type !== 'milestone' && task.progress === 100,
+    ).length;
+    const completedMilestones = current.tasks.filter(
+      (task) => task.type === 'milestone' && task.completed,
+    ).length;
+    const work = current.tasks.filter((task) => task.type !== 'milestone');
+    const totalDuration = work.reduce((total, task) => total + taskEnd(task) - taskStart(task), 0);
+    const progress = totalDuration
+      ? work.reduce((total, task) => total + (taskEnd(task) - taskStart(task)) * task.progress, 0) /
+        totalDuration
+      : undefined;
+    const roundedProgress = Math.round(progress ?? 0);
+    const progressLabel =
+      progress === undefined
+        ? 'N/A'
+        : progress > 0 && roundedProgress === 0
+          ? '<1%'
+          : progress < 100 && roundedProgress === 100
+            ? '>99%'
+            : `${roundedProgress}%`;
+    const planEnd = Math.max(...current.tasks.map(taskEnd));
+    const planDays = (planEnd - dateValue(config.origin)) / DAY;
+    const durationText = (days: number) => (days % 7 === 0 ? `${days / 7}w` : `${days}d`);
+    const endDelta = diff ? (planEnd - Math.max(...(previous?.tasks ?? []).map(taskEnd))) / DAY : 0;
+    const summaryLeft = width - 395;
+    const summary = [
+      { key: 'progress', value: progressLabel, label: translate('overallProgress') },
+      {
+        key: 'completed',
+        value: `${completedCount}/${taskCount}`,
+        label: translate('completedTasks'),
+      },
+      {
+        key: 'milestones',
+        value: `${completedMilestones}/${milestoneCount}`,
+        label: translate('milestones'),
+      },
+      { key: 'duration', value: durationText(planDays), label: translate('planDuration') },
+      ...(diff
+        ? [
+            {
+              key: 'endDelta',
+              value: `${endDelta > 0 ? '+' : endDelta < 0 ? '-' : ''}${durationText(Math.abs(endDelta))}`,
+              label: translate('endDelta'),
+              color: endDelta > 0 ? orange : endDelta < 0 ? green : ink,
+            },
+          ]
+        : []),
+    ];
+    const summaryStep = 360 / summary.length;
+    summary.forEach((item, index) => {
+      const left = summaryLeft + index * summaryStep;
+      if (index) line(left - 12, 56, left - 12, 127, rule, { 'stroke-opacity': 0.5 });
+      const valueSize = Math.min(30, (summaryStep - 20) / item.value.length);
+      text(item.value, left, 83, valueSize, item.color ?? ink, {
+        'font-weight': 600,
+        'data-summary': item.key,
+      });
+      wrapText(item.label, summaryStep - 20, 10).forEach((value, lineIndex) =>
+        text(value, left, 103 + lineIndex * 12, 10, muted, { 'font-weight': 700 }),
+      );
+    });
+    line(margin, dividerY, width - margin, dividerY);
+  }
   const headerElements = elements.slice();
   elements.push(
     `<defs><clipPath id="timeline-clip"><rect x="${plotLeft}" y="${unitAxisY + 24}" width="${plotWidth}" height="${plotBottom - unitAxisY - 24}"/></clipPath></defs>`,

@@ -45,6 +45,7 @@ test('Commander provides English help, validates choices and throws without exit
   ])
     assert.throws(() => main(args), { code });
   assert.throws(() => main(['--schema', '--mode=clean']), { code: 'cutegantt.error' });
+  assert.throws(() => main(['--schema', '--no-header']), { code: 'cutegantt.error' });
   assert.throws(() => main(['--schema', '--no-relative-time']), { code: 'cutegantt.error' });
   assert.throws(() => main(['--schema', '--no-group-summary', '--group-summary']), {
     code: 'cutegantt.error',
@@ -75,6 +76,7 @@ test('Commander provides English help, validates choices and throws without exit
     assert.equal(help.status, 0, help.stderr);
     assert.match(help.stdout, /Usage:/);
     assert.match(help.stdout, /-h, --help/);
+    assert.match(help.stdout, /--no-header/);
     assert.match(help.stdout, /choices: "clean", "diff", "both"/);
     assert.equal(run(['-h', '--lang=it']).stdout, run(['--help', '--lang=en']).stdout);
     assert.equal(help.stderr, '');
@@ -256,6 +258,140 @@ test('truncateUnits hides only units beyond project extent without changing the 
       () => validatePlan({ ...current.toJSON(), timeline: { ...current.timeline, truncateUnits } }),
       (error) => error.path.join('.') === 'timeline.truncateUnits',
     );
+  }
+});
+
+test('header defaults to enabled and can be removed without losing chart content or accessibility', () => {
+  const current = plan([task]);
+  const previous = plan([{ ...task, end: '2026-09-20' }]);
+  for (const diff of [false, true]) {
+    for (const notes of ['inline', 'separate']) {
+      const options = { previous, diff, notes };
+      const enabled = renderSvg(current, options);
+      const hidden = renderSvg(current, { ...options, header: false });
+      assert.deepEqual(renderSvg(current, { ...options, header: true }), enabled);
+      assert.equal(enabled.height - hidden.height, 144);
+      assert.deepEqual(hidden.changes, enabled.changes);
+      assert.match(hidden.svg, />Build<\/text>/);
+      for (const svg of [hidden.svg, hidden.notesSvg].filter(Boolean)) {
+        assert.doesNotMatch(svg, /data-summary=|>Atlas<\/text>/);
+        assert.match(svg, /<title id="(?:chart|notes)-title">Atlas/);
+        assert.match(svg, /<desc id="(?:chart|notes)-description">/);
+        assert.match(svg, /role="img" aria-labelledby=/);
+        assert.doesNotMatch(svg, /NaN|undefined/);
+      }
+      if (diff) {
+        const notesHeight = (svg) => Number(svg.match(/viewBox="0 0 [^ ]+ ([^"]+)"/)[1]);
+        assert.equal(notesHeight(enabled.notesSvg) - notesHeight(hidden.notesSvg), 144);
+      }
+    }
+  }
+});
+
+test('hidden header removes wrapped title space while preserving markers and font scaling', () => {
+  for (const fontScale of ['50%', '100%', '150%']) {
+    for (const changed of [false, true]) {
+      const current = {
+        ...withMarker(plan([task])).toJSON(),
+        title: 'A long project title '.repeat(10),
+        subtitle: 'A long project subtitle '.repeat(5),
+        style: { fontScale },
+      };
+      const previous = { ...current, tasks: [{ ...task, end: changed ? '2026-09-20' : task.end }] };
+      for (const notes of ['inline', 'separate']) {
+        const options = { previous, diff: true, notes, width: 1000 };
+        const enabled = renderSvg(current, options);
+        const hidden = renderSvg(current, { ...options, header: false });
+        const shortTitle = renderSvg(
+          { ...current, title: 'Short', subtitle: 'Short' },
+          { ...options, header: false },
+        );
+        assert.equal(hidden.height, shortTitle.height);
+        assert.deepEqual(renderSvg(current, { ...options, header: true }), enabled);
+        assert.deepEqual(hidden.changes, enabled.changes);
+        assert.match(hidden.svg, /data-marker="label"/);
+        const firstMarkerY = (svg) =>
+          Number(svg.match(/<text[^>]*y="([^"]+)"[^>]*data-marker="label"/)[1]);
+        const removedSpace = firstMarkerY(enabled.svg) - firstMarkerY(hidden.svg);
+        assert.ok(removedSpace > 144);
+        assert.equal(enabled.height - hidden.height, (removedSpace * parseFloat(fontScale)) / 100);
+        const height = (svg) => Number(svg.match(/<svg[^>]*height="([^"]+)"/)[1]);
+        assert.equal(
+          height(enabled.notesSvg) - height(hidden.notesSvg),
+          enabled.height - hidden.height,
+        );
+        assert.equal(height(hidden.notesSvg), height(shortTitle.notesSvg));
+        for (const svg of [hidden.svg, hidden.notesSvg]) {
+          assert.doesNotMatch(svg, /data-summary=|>A long project[^<]*<\/text>/);
+          assert.doesNotMatch(svg, /NaN|undefined/);
+        }
+      }
+    }
+  }
+});
+
+test('CLI no-header applies to all SVG outputs and preserves reports and input', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'cutegantt-header-'));
+  const cli = fileURLToPath(new URL('../packages/cutegantt-cli/dist/cli.js', import.meta.url));
+  try {
+    const previous = join(directory, 'previous.json');
+    writeFileSync(previous, JSON.stringify(plan([{ ...task, end: '2026-09-20' }]).toJSON()));
+    for (const extension of ['json', 'yaml']) {
+      const input = join(directory, `current.${extension}`);
+      const raw = plan([task]).toJSON();
+      const source = extension === 'json' ? JSON.stringify(raw) : stringify(raw);
+      writeFileSync(input, source);
+      for (const mode of ['clean', 'diff', 'both']) {
+        for (const notes of ['inline', 'separate']) {
+          const outputs = [true, false].map((header) => {
+            const output = join(directory, `${extension}-${mode}-${notes}-${header}`);
+            const result = spawnSync(
+              process.execPath,
+              [
+                cli,
+                input,
+                '--previous',
+                previous,
+                '--mode',
+                mode,
+                '--notes',
+                notes,
+                '--out-dir',
+                output,
+                ...(header ? [] : ['--no-header']),
+              ],
+              { encoding: 'utf8' },
+            );
+            assert.ifError(result.error);
+            assert.equal(result.status, 0, result.stderr);
+            const suffixes = [
+              ...(mode !== 'diff' ? ['svg'] : []),
+              ...(mode !== 'clean'
+                ? ['diff.svg', ...(notes === 'separate' ? ['notes.svg'] : [])]
+                : []),
+            ];
+            for (const suffix of suffixes) {
+              const svg = readFileSync(join(output, `current.${suffix}`), 'utf8');
+              assert.equal(svg.includes('data-summary='), header);
+              assert.equal(svg.includes('>Atlas</text>'), header);
+              assert.match(svg, /<title id="(?:chart|notes)-title">Atlas/);
+            }
+            return output;
+          });
+          if (mode !== 'clean') {
+            for (const suffix of ['changes.md', 'changes.json']) {
+              assert.equal(
+                readFileSync(join(outputs[0], `current.${suffix}`), 'utf8'),
+                readFileSync(join(outputs[1], `current.${suffix}`), 'utf8'),
+              );
+            }
+          }
+          assert.equal(readFileSync(input, 'utf8'), source);
+        }
+      }
+    }
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
   }
 });
 

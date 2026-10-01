@@ -190,7 +190,7 @@ Holiday calendars are annual JSON or YAML files. Their top-level array is named 
 
 ### CLI Reference
 
-Run `cutegantt --help` for the full option reference.
+Run `cutegantt --help` for the full option reference. Add `--no-header` to omit the visible title, subtitle and summary metrics from all SVG outputs, including separate notes, without leaving their vertical space. The header is enabled by default; Markdown/JSON reports and SVG accessibility metadata are unchanged.
 
 | Option                                   | Purpose                                                                    |
 | ---------------------------------------- | -------------------------------------------------------------------------- |
@@ -232,7 +232,7 @@ const plan = ProjectPlan.from({
 const { svg } = renderSvg(plan, { theme: 'light', lang: 'en' });
 ```
 
-`svg` is a string that your application can save or display. YAML parsing and file handling belong to the CLI; library consumers provide JavaScript objects. See the [public exports](packages/cutegantt/src/index.ts) for the API and its TypeScript types.
+`svg` is a string that your application can save or display. Pass `header: false` to `renderSvg` to omit the visible header; it is enabled by default. YAML parsing and file handling belong to the CLI; library consumers provide JavaScript objects. See the [public exports](packages/cutegantt/src/index.ts) for the API and its TypeScript types.
 
 To package the library from a checkout, run `npm run build` followed by `npm pack --workspace cutegantt`, then install the generated tarball in your consuming project.
 

@@ -61,6 +61,12 @@ Commander generates the English help directly from option descriptions, choices 
 | `--schema`                              | Print input JSON Schema only; accepts `--lang` and `--help`, no rendering arguments |
 | `-h`, `--help`                          | Display generated English help without rendering                                    |
 
+Use `--no-header` to omit the visible title, subtitle, summary metrics and header decorations from all SVG outputs, including separate comparison notes. The chart closes the space left by the header; axes, legends and accessibility metadata remain present. The header is enabled by default, and Markdown/JSON reports are unaffected.
+
+```sh
+cutegantt plans/current.yaml --no-header
+```
+
 Timeline origin, unit duration/name, visible range, markers, week numbers, truncation and date locale are configured in the input, not new flags. Removed legacy flags remain rejected. Commander still validates syntax and option choices when `--help` is present. CLI help and diagnostics no longer use the core language catalogs.
 
 Clean mode writes `<stem>.svg`. Diff mode writes `<stem>.diff.svg`, `<stem>.changes.md`, `<stem>.changes.json` and, unless inline notes are requested, `<stem>.notes.svg`. Both mode also writes the clean chart. Only the last input extension is removed from the stem. Paths and the selected baseline are reported on stdout; errors go to stderr with exit code 1. Existing output files are protected unless `--force` is given.

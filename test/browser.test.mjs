@@ -47,6 +47,81 @@ test('workspace and compiled packages enforce public boundaries', () => {
   }
 });
 
+test('headerless charts and notes keep visible text inside the SVG on desktop and mobile', async () => {
+  const browser = await chromium.launch({ headless: true });
+  const input = {
+    project: 'headerless',
+    title: 'A long title that must not reserve any visible space '.repeat(5),
+    timeline: {
+      origin: '2026-09-01',
+      markers: [{ position: '2026-09-10', label: 'Review' }],
+    },
+    tasks: [{ id: 'build', name: 'Build', start: 1, end: 2, progress: 50 }],
+  };
+  const previous = { ...input, tasks: [{ ...input.tasks[0], end: 1 }] };
+  try {
+    for (const viewport of [
+      { width: 1440, height: 900 },
+      { width: 390, height: 844 },
+    ]) {
+      const page = await browser.newPage({ viewport });
+      for (const fontScale of ['50%', '150%']) {
+        const rendered = renderSvg(
+          { ...input, style: { fontScale } },
+          {
+            previous,
+            diff: true,
+            header: false,
+            width: 1000,
+          },
+        );
+        for (const svg of [rendered.svg, rendered.notesSvg]) {
+          await page.setContent(`<style>svg { max-width: 100%; height: auto; }</style>${svg}`);
+          const result = await page.evaluate(() => {
+            const svg = document.querySelector('svg');
+            const bounds = svg.getBoundingClientRect();
+            const textBounds = [...svg.querySelectorAll('text')].map((text) => {
+              const box = text.getBoundingClientRect();
+              return {
+                text: text.textContent,
+                top: box.top,
+                bottom: box.bottom,
+                left: box.left,
+                right: box.right,
+              };
+            });
+            return {
+              width: bounds.width,
+              height: bounds.height,
+              summaries: svg.querySelectorAll('[data-summary]').length,
+              outside: textBounds.filter(
+                (box) =>
+                  box.top < bounds.top ||
+                  box.bottom > bounds.bottom ||
+                  box.left < bounds.left ||
+                  box.right > bounds.right,
+              ),
+              topGap:
+                ((Math.min(...textBounds.map((box) => box.top)) - bounds.top) *
+                  svg.viewBox.baseVal.height) /
+                bounds.height,
+            };
+          });
+          assert.equal(result.summaries, 0);
+          assert.deepEqual(result.outside, []);
+          assert.ok(result.width > 0 && result.width <= viewport.width);
+          assert.ok(result.height > 0);
+          assert.ok(result.topGap >= 0 && result.topGap < 60);
+          assert.ok((await page.screenshot()).length > 1000);
+        }
+      }
+      await page.close();
+    }
+  } finally {
+    await browser.close();
+  }
+});
+
 test('core bundles and renders in a real browser without Node globals', async () => {
   const bundle = await build({
     entryPoints: [fileURLToPath(new URL('packages/cutegantt/dist/index.js', root))],

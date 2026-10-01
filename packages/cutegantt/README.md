@@ -22,6 +22,12 @@ const markdown = renderMarkdown(current, previous, changes, 'Current', 'Previous
 
 `renderSvg` returns `{ svg, notesSvg, changes, width, height }`. `notesSvg` is present for comparisons. `RenderOptions` includes width, theme, font, note placement, language, display labels, holidays and weekend shading. Models and rendering functions accept unknown input and validate at runtime; `ProjectPlanInput` provides optional compile-time checking for authored documents.
 
+Pass `header: false` to `renderSvg` to omit the visible title, subtitle, summary metrics and header decorations, including their vertical space. The header is enabled by default. This applies to both the chart and separate notes SVG; axes, legends and accessibility metadata remain present. Markdown reports are unaffected.
+
+```ts
+const { svg } = renderSvg(current, { header: false });
+```
+
 The public entrypoint exports model classes, validation schemas, `planJsonSchema`, comparison/rendering functions, calendar helpers and translation/date-formatting functions. `Task` and `Milestone` form a discriminated union. `ProjectPlan.toJSON()` returns normalized plan data; model instances remain mutable and `ProjectPlan.from(existingInstance)` retains identity. Validation failures preserve `translationKey`, `parameters`, `path`, `issues` and `cause`.
 
 ```ts

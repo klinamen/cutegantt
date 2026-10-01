@@ -21,6 +21,7 @@ interface CommandOptions {
   outDir: string;
   relativeTime?: boolean;
   groupSummary?: boolean;
+  header: boolean;
   holidaysDir?: string;
   shadeWeekends?: boolean;
   holidayLabels?: boolean;
@@ -56,6 +57,7 @@ function createCommand() {
     .option('--no-relative-time', 'Override the plan to show absolute dates')
     .option('--group-summary', 'Show group spans and duration-weighted progress')
     .option('--no-group-summary', 'Hide group summaries')
+    .option('--no-header', 'Hide SVG title, subtitle and summary metrics')
     .option('--holidays-dir <directory>', 'Directory of annual JSON/YAML holiday calendars')
     .option('--shade-weekends', 'Shade Saturdays and Sundays')
     .option('--holiday-labels', 'Show holiday labels')
@@ -151,6 +153,7 @@ function generateFiles(values: CommandOptions, inputFile: string) {
   if (previousFile === input) throw new Error('The previous version must be a different file.');
   const previous = previousFile ? loadPlan(previousFile) : undefined;
   const options = {
+    header: values.header,
     holidays,
     shadeWeekends: values.shadeWeekends,
     holidayLabels: values.holidayLabels,
