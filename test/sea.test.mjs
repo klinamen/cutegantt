@@ -46,6 +46,15 @@ test('SEA runs without Node on PATH and matches CLI output', () => {
       assert.equal(built.status, 0, `${built.stdout}\n${built.stderr}`);
     }
     mkdirSync(join(directory, 'empty-path'));
+    const { version } = JSON.parse(
+      readFileSync(join(root, 'packages/cutegantt-cli/package.json'), 'utf8'),
+    );
+    for (const flag of ['--version', '-V']) {
+      const result = run(executable, [flag], true);
+      assert.equal(result.status, 0, result.stderr);
+      assert.equal(result.stdout, `${version}\n`);
+      assert.equal(result.stderr, '');
+    }
     for (const args of [['--help'], ['--schema', '--lang', 'it'], ['--unknown-option']]) {
       const normal = run(process.execPath, [cli, ...args]);
       const sea = run(executable, args, true);

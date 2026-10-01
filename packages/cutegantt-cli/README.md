@@ -18,7 +18,7 @@ With Node.js >=24, run these commands from the repository root (`src/cutegantt`)
 ```sh
 npm ci
 npm run pack:cli
-npm install -g ./cutegantt-cli-1.0.0.tgz
+npm install -g ./cutegantt-cli-1.1.0.tgz
 cutegantt --help
 ```
 
@@ -39,6 +39,8 @@ Use `npm run test:sea` to verify execution without Node on PATH. macOS builds re
 The repository's `SEA Binaries` GitHub Actions workflow builds and tests natively on macOS Intel/Apple Silicon and Linux x64/ARM64 (glibc). Successful jobs upload a target-specific `.tar.gz`, SHA-256 checksum and build metadata. Extract the archive to preserve executable permissions. Windows and Alpine/musl are not included; macOS downloads are not notarized. The workflow has not yet been run on GitHub.
 
 ## Options
+
+Run `cutegantt --version` (or `cutegantt -V`) to print the CLI package version and exit successfully, without an input plan or generated files. This also works in the standalone executable; rebuild it after updating the package version.
 
 Commander generates the English help directly from option descriptions, choices and defaults. All CLI diagnostics and operational messages are English; `--lang` affects generated content only. A required option consumes the next token as its value even if it begins with a dash. Use `--` before positional filenames beginning with a dash. Positive/negative boolean pairs use the last supplied value; omitting both preserves the plan setting. Calling the exported `main()` prints diagnostics and throws errors rather than terminating the host process; displaying help returns normally.
 

@@ -39,6 +39,33 @@ import {
 } from 'cutegantt';
 
 const task = { id: 'build', name: 'Build', start: '2026-09-01', end: '2026-09-30' };
+test('CLI version reports its package version without rendering or exiting the caller', (context) => {
+  const { version } = JSON.parse(
+    readFileSync(new URL('../packages/cutegantt-cli/package.json', import.meta.url), 'utf8'),
+  );
+  const output = context.mock.method(process.stdout, 'write', () => true);
+  assert.equal(main(['--version']), undefined);
+  assert.equal(output.mock.calls.map((call) => call.arguments[0]).join(''), `${version}\n`);
+  output.mock.restore();
+  const directory = mkdtempSync(join(tmpdir(), 'cutegantt-version-'));
+  const cli = fileURLToPath(new URL('../packages/cutegantt-cli/dist/cli.js', import.meta.url));
+  try {
+    for (const args of [['--version'], ['-V'], ['--lang=it', '--version']]) {
+      const result = spawnSync(process.execPath, [cli, ...args], {
+        cwd: directory,
+        encoding: 'utf8',
+      });
+      assert.ifError(result.error);
+      assert.equal(result.status, 0, result.stderr);
+      assert.equal(result.stdout, `${version}\n`);
+      assert.equal(result.stderr, '');
+      assert.deepEqual(readdirSync(directory), []);
+    }
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
 test('Commander provides English help, validates choices and throws without exiting the caller', (context) => {
   const diagnostics = context.mock.method(process.stderr, 'write', () => true);
   for (const [args, code] of [
@@ -93,6 +120,7 @@ test('Commander provides English help, validates choices and throws without exit
     assert.equal(help.status, 0, help.stderr);
     assert.match(help.stdout, /Usage:/);
     assert.match(help.stdout, /-h, --help/);
+    assert.match(help.stdout, /-V, --version/);
     assert.match(help.stdout, /--no-header/);
     assert.match(help.stdout, /--page-size/);
     assert.match(help.stdout, /--pages/);

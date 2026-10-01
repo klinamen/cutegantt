@@ -80,6 +80,11 @@ test('packed core and CLI install, typecheck and run outside workspaces', async 
     }
     const bin = join(consumer, 'node_modules/.bin/cutegantt');
     assert.match(run(bin, ['--help'], elsewhere), /--holidays-dir/);
+    const { version } = JSON.parse(
+      readFileSync(join(root, 'packages/cutegantt-cli/package.json'), 'utf8'),
+    );
+    assert.equal(run(bin, ['--version'], elsewhere), `${version}\n`);
+    assert.equal(run(bin, ['-V'], elsewhere), `${version}\n`);
     const schema = JSON.parse(run(bin, ['--schema', '--lang', 'it'], elsewhere));
     assert.equal(schema.$schema, 'https://json-schema.org/draft/2020-12/schema');
     assert.deepEqual(readdirSync(elsewhere), []);

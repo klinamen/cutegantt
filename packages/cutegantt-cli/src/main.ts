@@ -10,6 +10,7 @@ import {
   renderMarkdown,
 } from 'cutegantt';
 import type { PlanError, PaginatedRenderOptions } from 'cutegantt';
+import packageJson from '../package.json' with { type: 'json' };
 import { loadPlan, findPrevious, planStem, loadHolidays } from './plan-files.js';
 export { loadPlan, findPrevious, loadHolidays, planStem } from './plan-files.js';
 
@@ -58,6 +59,7 @@ function parsePages(value: string): PaginatedRenderOptions['pages'] {
 function createCommand() {
   return new Command('cutegantt')
     .description('Generate beautiful SVG Gantt charts and change reports from JSON or YAML plans.')
+    .version(packageJson.version, '-V, --version', 'Display the CLI version')
     .exitOverride()
     .argument('[input]', 'Plan file (.json, .yaml or .yml); omit with --schema')
     .option('--schema', 'Print JSON Schema instead of rendering a plan')
