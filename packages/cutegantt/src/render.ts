@@ -900,8 +900,7 @@ export function renderSvgPages(
           ? `${dates.full(monthStart)} / ${dates.full(end - DAY)}`
           : `M${relative.index + 1}`
         : dates.month(monthStart).toLocaleUpperCase(dates.locale);
-      if (right - left >= Math.max(65, monthLabel.length * 7 + 16))
-        text(monthLabel, left + 8, axisY + 9, 11, muted, { 'font-weight': 700 });
+      text(monthLabel, left + 8, axisY + 9, 11, muted, { 'font-weight': 700 });
       if (right - left > 8)
         line(left + 4, axisY + 17, right - 4, axisY + 17, rule, {
           'stroke-opacity': 0.6,

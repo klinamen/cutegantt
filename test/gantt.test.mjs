@@ -1860,6 +1860,32 @@ test('month labels follow language without changing date locale or relative mont
   assert.doesNotMatch(relative, />SEP 2026</);
 });
 
+test('month labels remain visible on narrow absolute and relative segments', () => {
+  for (const relativeTime of [false, true]) {
+    const current = {
+      project: 'narrow-months',
+      title: 'Narrow months',
+      version: '2026-01-01',
+      timeline: {
+        origin: '2026-01-01',
+        relativeTime,
+        timeUnit: { duration: '90d', name: 'Quarter' },
+        visibleRange: { start: '2026-01-01', end: '2027-12-01' },
+      },
+      tasks: [{ id: 'work', name: 'Work', start: '2026-01-01', end: '2027-12-01' }],
+    };
+    const { svg } = renderSvg(current, { width: 1000 });
+    for (let month = 0; month < 24; month++) {
+      const label = relativeTime
+        ? `M${month + 1}`
+        : dateFormatters('en', 'en-GB')
+            .month(Date.UTC(2026, month, 1))
+            .toUpperCase();
+      assert.ok(svg.includes(`>${label}</text>`), `Missing month label: ${label}`);
+    }
+  }
+});
+
 test('date locales default by language and remain independent of translated text', () => {
   assert.equal(dateFormatters('en').locale, 'en-GB');
   assert.equal(dateFormatters('it').locale, 'it-IT');
