@@ -23,6 +23,7 @@ interface CommandOptions {
   relativeTime?: boolean;
   groupSummary?: boolean;
   header: boolean;
+  months: boolean;
   pageSize: number;
   pages: PaginatedRenderOptions['pages'];
   holidaysDir?: string;
@@ -83,6 +84,7 @@ function createCommand() {
     .option('--group-summary', 'Show group spans and duration-weighted progress')
     .option('--no-group-summary', 'Hide group summaries')
     .option('--no-header', 'Hide SVG title, subtitle and summary metrics')
+    .option('--no-months', 'Hide month labels and month separator bars')
     .option(
       '--page-size <count>',
       'Maximum activities per SVG page; 0 disables pagination',
@@ -191,6 +193,7 @@ function generateFiles(values: CommandOptions, inputFile: string) {
   const previous = previousFile ? loadPlan(previousFile) : undefined;
   const options = {
     header: values.header,
+    months: values.months === false ? false : undefined,
     pageSize: values.pageSize,
     pages: values.pages,
     holidays,

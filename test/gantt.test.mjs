@@ -915,6 +915,147 @@ test('CLI JSON Schema is pure JSON without input or filesystem side effects', ()
   }
 });
 
+test('showProgress hides generated chart indicators without changing plan data', () => {
+  const current = {
+    title: 'Visibility',
+    project: 'visibility',
+    timeline: { origin: '2026-09-01' },
+    style: { groupSummary: true },
+    tasks: [
+      { ...task, group: 'Delivery', progress: 50 },
+      { id: 'done', name: 'Release', type: 'milestone', date: '2026-09-30', completed: true },
+    ],
+  };
+  const shown = renderSvg(current).svg;
+  assert.equal(
+    renderSvg({ ...current, style: { ...current.style, showProgress: true } }).svg,
+    shown,
+  );
+  const hidden = { ...current, style: { ...current.style, showProgress: false } };
+  const snapshot = JSON.stringify(hidden);
+  const svg = renderSvg(hidden).svg;
+  assert.doesNotMatch(
+    svg,
+    /\d+%|data-summary="(?:progress|completed|milestones)"|Plan \/ progress/,
+  );
+  assert.doesNotMatch(svg, /data-group-summary="(?:progress|label)"/);
+  assert.match(svg, /data-group-summary="span"/);
+  assert.match(svg, /data-summary="duration"/);
+  assert.match(svg, /<polygon[^>]*fill="none"[^>]*stroke-width="1.6"/);
+  assert.doesNotMatch(svg, /<rect[^>]*height="19"[^>]*fill="[^"]+"\/>/);
+  assert.equal(JSON.stringify(hidden), snapshot);
+  assert.equal(validatePlan(hidden).tasks[0].progress, 50);
+  assert.equal(validatePlan(hidden).tasks[1].completed, true);
+  for (const showProgress of [null, 'false', 0]) {
+    assert.throws(
+      () => validatePlan({ ...current, style: { showProgress } }),
+      (error) => error.path.join('.') === 'style.showProgress',
+    );
+  }
+});
+
+test('showProgress hides comparison details on every page and preserves raw changes', () => {
+  const previous = {
+    project: 'visibility',
+    title: 'Visibility',
+    timeline: { origin: '2026-09-01' },
+    tasks: [
+      { ...task, progress: 10 },
+      { ...task, id: 'only-progress', progress: 10 },
+      { id: 'done', name: 'Release', type: 'milestone', date: '2026-09-30', completed: false },
+    ],
+  };
+  const current = {
+    ...previous,
+    style: { showProgress: false, groupSummary: true },
+    tasks: [
+      { ...previous.tasks[0], progress: 50, end: '2026-10-07' },
+      { ...previous.tasks[1], progress: 100 },
+      { ...previous.tasks[2], completed: true },
+    ],
+  };
+  const changes = comparePlans(current, previous);
+  assert.equal(changes.length, 3);
+  for (const notes of ['inline', 'separate']) {
+    for (const header of [true, false]) {
+      const result = renderSvgPages(current, { previous, diff: true, pageSize: 1, notes, header });
+      assert.deepEqual(result.changes, changes);
+      for (const content of [...result.pages.map((page) => page.svg), result.notesSvg]) {
+        assert.doesNotMatch(content, /\d+%|Progress:|Completed:|Plan \/ progress/);
+        assert.doesNotMatch(content, /data-summary="(?:progress|completed|milestones)"/);
+      }
+      assert.match(result.notesSvg, /End:/);
+      assert.doesNotMatch(result.notesSvg, />Release</);
+    }
+  }
+  const markdown = renderMarkdown(current, previous, changes);
+  assert.match(markdown, /End:/);
+  assert.doesNotMatch(markdown, /\d+%|Progress:|Completed:|only-progress|Release/);
+  const progressOnly = {
+    ...current,
+    tasks: previous.tasks.map((item) =>
+      item.type === 'milestone' ? { ...item, completed: true } : { ...item, progress: 90 },
+    ),
+  };
+  const result = renderSvg(progressOnly, { previous, diff: true });
+  assert.equal(result.changes.length, 3);
+  assert.match(result.notesSvg, /No changes/);
+  assert.match(renderMarkdown(progressOnly, previous, result.changes), /No changes/);
+  const annotated = { ...progressOnly, changeNotes: { build: 'User note retained' } };
+  assert.match(renderSvg(annotated, { previous, diff: true }).notesSvg, /User note retained/);
+});
+
+test('CLI loads showProgress from YAML and JSON while preserving raw reports', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'gantt-progress-'));
+  const cli = fileURLToPath(new URL('../packages/cutegantt-cli/dist/cli.js', import.meta.url));
+  try {
+    for (const extension of ['yaml', 'json']) {
+      const encode = extension === 'json' ? JSON.stringify : stringify;
+      const input = join(directory, `current.${extension}`);
+      const baseline = join(directory, `previous.${extension}`);
+      const previous = {
+        title: 'Visibility',
+        project: 'visibility',
+        timeline: { origin: '2026-09-01', relativeTime: extension === 'yaml' },
+        tasks: [{ ...task, progress: 10 }],
+      };
+      const current = {
+        ...previous,
+        style: { showProgress: false },
+        tasks: [{ ...task, progress: 60, end: '2026-10-07' }],
+      };
+      writeFileSync(input, encode(current));
+      writeFileSync(baseline, encode(previous));
+      const output = join(directory, extension);
+      const run = spawnSync(
+        process.execPath,
+        [cli, input, '--previous', baseline, '--mode', 'both', '--out-dir', output],
+        { encoding: 'utf8' },
+      );
+      assert.equal(run.status, 0, run.stderr);
+      for (const suffix of ['svg', 'diff.svg', 'notes.svg', 'changes.md']) {
+        const content = readFileSync(join(output, `current.${suffix}`), 'utf8');
+        assert.doesNotMatch(content, /\d+%|Progress:|Plan \/ progress/);
+        assert.doesNotMatch(content, /data-summary="(?:progress|completed|milestones)"/);
+      }
+      const report = JSON.parse(readFileSync(join(output, 'current.changes.json'), 'utf8'));
+      assert.equal(report.changes[0].after.progress, 60);
+      assert.ok(report.changes[0].fields.includes('progress'));
+      assert.equal(loadPlan(input).style.showProgress, false);
+      assert.equal(readFileSync(input, 'utf8'), encode(current));
+    }
+    for (const lang of ['en', 'it']) {
+      const schema = planJsonSchema(lang).properties.style;
+      const fields =
+        schema.properties ?? schema.anyOf.find((branch) => branch.properties).properties;
+      assert.equal(fields.showProgress.type, 'boolean');
+      assert.ok(!fields.showProgress.description.startsWith('schema.'));
+    }
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
 test('optional group summary uses current duration-weighted progress and full clipped span', () => {
   const raw = {
     title: 'Groups',
@@ -1875,6 +2016,23 @@ test('month labels remain visible on narrow absolute and relative segments', () 
       tasks: [{ id: 'work', name: 'Work', start: '2026-01-01', end: '2027-12-01' }],
     };
     const { svg } = renderSvg(current, { width: 1000 });
+    assert.equal(renderSvg(current, { width: 1000, months: true }).svg, svg);
+    const hidden = renderSvg(current, { width: 1000, months: false }).svg;
+    const configured = {
+      ...current,
+      timeline: { ...current.timeline, showMonths: false },
+    };
+    assert.equal(renderSvg(configured, { width: 1000 }).svg, hidden);
+    assert.equal(renderSvg(configured, { width: 1000, months: true }).svg, svg);
+    assert.equal(validatePlan(configured).toJSON().timeline.showMonths, false);
+    for (const showMonths of [null, 'false', 0]) {
+      assert.throws(
+        () => validatePlan({ ...current, timeline: { ...current.timeline, showMonths } }),
+        (error) => error.path.join('.') === 'timeline.showMonths',
+      );
+    }
+    assert.doesNotMatch(hidden, /stroke-width="4"/);
+    assert.match(hidden, />Quarter</);
     for (let month = 0; month < 24; month++) {
       const label = relativeTime
         ? `M${month + 1}`
@@ -1882,7 +2040,54 @@ test('month labels remain visible on narrow absolute and relative segments', () 
             .month(Date.UTC(2026, month, 1))
             .toUpperCase();
       assert.ok(svg.includes(`>${label}</text>`), `Missing month label: ${label}`);
+      assert.ok(!hidden.includes(`>${label}</text>`), `Unexpected month label: ${label}`);
     }
+  }
+});
+
+test('CLI respects month visibility in YAML and JSON and supports no-months overrides', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'gantt-months-'));
+  const cli = fileURLToPath(new URL('../packages/cutegantt-cli/dist/cli.js', import.meta.url));
+  try {
+    for (const extension of ['json', 'yaml']) {
+      const input = join(directory, `current.${extension}`);
+      const encode = extension === 'json' ? JSON.stringify : stringify;
+      for (const [showMonths, flags, expected] of [
+        [undefined, [], true],
+        [false, [], false],
+        [true, [], true],
+        [true, ['--no-months'], false],
+      ]) {
+        const current = {
+          project: 'months',
+          title: 'Months',
+          timeline: { origin: '2026-09-01', showMonths, showWeekNumbers: true },
+          tasks: [task, { ...task, id: 'second' }],
+        };
+        writeFileSync(input, encode(current));
+        const output = join(directory, `${extension}-${showMonths}-${expected}`);
+        const run = spawnSync(
+          process.execPath,
+          [cli, input, '--out-dir', output, '--page-size', '1', ...flags],
+          { encoding: 'utf8' },
+        );
+        assert.equal(run.status, 0, run.stderr);
+        for (const page of [1, 2]) {
+          const svg = readFileSync(join(output, `current_${page}.svg`), 'utf8');
+          assert.equal(svg.includes('>SEP 2026</text>'), expected);
+          assert.match(svg, /data-calendar="week"/);
+        }
+      }
+    }
+    const schema = planJsonSchema('en').properties.timeline.properties.showMonths;
+    assert.equal(schema.type, 'boolean');
+    assert.match(schema.description, /on by default/);
+    const run = spawnSync(process.execPath, [cli, '--schema', '--no-months'], {
+      encoding: 'utf8',
+    });
+    assert.notEqual(run.status, 0);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
   }
 });
 

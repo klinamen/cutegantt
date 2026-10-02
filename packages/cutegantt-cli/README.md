@@ -18,7 +18,7 @@ With Node.js >=24, run these commands from the repository root (`src/cutegantt`)
 ```sh
 npm ci
 npm run pack:cli
-npm install -g ./cutegantt-cli-1.1.0.tgz
+npm install -g ./cutegantt-cli-1.2.0.tgz
 cutegantt --help
 ```
 
@@ -68,6 +68,25 @@ Use `--no-header` to omit the visible title, subtitle, summary metrics and heade
 ```sh
 cutegantt plans/current.yaml --no-header
 ```
+
+Use `--no-months` to hide month labels and separator bars on every chart page, including relative months such as M1 and M2. Months are visible by default, or can be disabled in the JSON/YAML plan:
+
+```yaml
+timeline:
+	origin: "2026-01-01"
+	showMonths: false
+```
+
+Without the flag, the CLI respects `timeline.showMonths`; `--no-months` overrides a true value. Weeks, time units and chart geometry remain unchanged.
+
+To hide generated progress information, set the following in the JSON/YAML plan (default `true`):
+
+```yaml
+style:
+	showProgress: false
+```
+
+This hides task/group percentages and progress fills, header progress/completion metrics, and milestone completion styling on every chart page and in separate notes. Planned bars, group spans, dates and durations remain visible. Generated progress/completion change details are hidden in SVG and Markdown; progress-only changes without user notes are omitted from the displayed register. Input data, JSON reports and user-authored text remain unchanged. There is no CLI override for this setting.
 
 ### Pagination
 

@@ -106,6 +106,8 @@ export default {
       'Unita facoltativa di durata fissa in giorni di calendario. Default durata 2w e nome Sprint, anche se uno dei campi e omesso.',
     duration:
       'Durata con token d e w, ad esempio 5d, 2w, 1w 2d. Massimo 80 caratteri dopo il trim e totale intero tra 1 e 3660 giorni. Niente mesi variabili o altre unita. Verifica applicativa; default 2w.',
+    showMonths:
+      'Booleano facoltativo, attivo per default. Mostra etichette e barre mensili in tempo assoluto e relativo. CLI --no-months le nasconde senza modificare settimane o unita temporali.',
     showWeekNumbers:
       "Booleano facoltativo, disattivato per default. Aggiunge settimane ISO sotto i mesi, o settimane dall'origine in modalita relativa. Etichette diradate nelle viste dense.",
     relativeTime:
@@ -125,6 +127,8 @@ export default {
     theme:
       'Scalare facoltativo; il renderer accetta light o dark, default light. Entrambi i temi SVG sono trasparenti.',
     font: 'Famiglia di caratteri facoltativa; default di rendering Aptos, Segoe UI, sans-serif. Font non incorporati.',
+    showProgress:
+      'Booleano facoltativo, attivo per default. Se false nasconde percentuali, riempimenti, indicatori di completamento e dettagli generati sulle variazioni di progresso in SVG e Markdown. Dati del piano, report JSON e testi utente restano invariati.',
     groupSummary:
       "Booleano facoltativo, disattivato per default. Mostra estensione del gruppo corrente e progresso ponderato per durata. Milestone incluse nell'estensione ma escluse dalla percentuale. Override CLI group-summary/no-group-summary.",
     changeNotes:

@@ -24,6 +24,7 @@ export interface RenderOptions {
   previous?: unknown;
   diff?: boolean;
   header?: boolean;
+  months?: boolean;
   lang?: string;
   width?: string | number;
   theme?: string | number;
@@ -203,6 +204,23 @@ export function comparePlans(currentInput: unknown, previousInput: unknown, lang
   return changes;
 }
 
+function visibleChanges(changes: Change[], showProgress: boolean): Change[] {
+  if (showProgress) return changes;
+  return changes.flatMap((change) => {
+    if (change.kind !== 'changed') return [change];
+    const visibleField = (field: string) => !['progress', 'completed'].includes(field);
+    const fields = change.fields.filter(visibleField);
+    if (!fields.length && !change.note) return [];
+    return [
+      {
+        ...change,
+        fields,
+        details: change.details.filter((_, index) => visibleField(change.fields[index])),
+      },
+    ];
+  });
+}
+
 export function resolveTimeUnit(config: { timeUnit?: unknown } = {}) {
   const unit = parseModel(timeUnitSchema, config.timeUnit ?? {});
   return { days: durationDays(unit.duration), label: unit.name };
@@ -334,6 +352,7 @@ export function renderSvgPages(
   const dates = planDates(current, lang);
   if (diff && !previous) throw localizedError('diff');
   const config = current.timeline ?? {};
+  const showProgress = current.style.showProgress ?? true;
   const outputWidth = Number(options.width ?? current.style?.width ?? 1600);
   if (!Number.isFinite(outputWidth) || outputWidth < 1000 || outputWidth > 8000)
     throw localizedError('width');
@@ -405,7 +424,8 @@ export function renderSvgPages(
   if (minTickWidth < 44) throw localizedError('density');
   const mapDate = (stamp: number) =>
     plotLeft + ((stamp - timeline.start) / (timeline.end - timeline.start)) * plotWidth;
-  const changes = diff ? comparePlans(current, previous, lang) : [];
+  const allChanges = diff ? comparePlans(current, previous, lang) : [];
+  const changes = visibleChanges(allChanges, showProgress);
   const notesMode = options.notes ?? 'separate';
   if (!['inline', 'separate'].includes(notesMode)) throw localizedError('notes');
   const inlineNotes = diff && notesMode === 'inline';
@@ -530,12 +550,13 @@ export function renderSvgPages(
           (total, task) => total + taskEnd(task) - taskStart(task),
           0,
         );
-        const progress = totalDuration
-          ? work.reduce(
-              (total, task) => total + (taskEnd(task) - taskStart(task)) * task.progress,
-              0,
-            ) / totalDuration
-          : undefined;
+        const progress =
+          showProgress && totalDuration
+            ? work.reduce(
+                (total, task) => total + (taskEnd(task) - taskStart(task)) * task.progress,
+                0,
+              ) / totalDuration
+            : undefined;
         const summary = members.length
           ? {
               start: Math.min(...members.map(taskStart)),
@@ -567,7 +588,7 @@ export function renderSvgPages(
         const meta =
           task.type === 'milestone'
             ? dates.full(task.date)
-            : `${dates.short(task.start)} - ${dates.short(task.end)} (${duration})  /  ${task.progress}%`;
+            : `${dates.short(task.start)} - ${dates.short(task.end)} (${duration})${showProgress ? `  /  ${task.progress}%` : ''}`;
         const fullMeta = `${task.owner ? `${task.owner}  /  ` : ''}${meta}`;
         const metaLines = leftLines(fullMeta, labelWidth - 10, 12);
         const height = Math.max(
@@ -783,7 +804,9 @@ export function renderSvgPages(
               },
             ]
           : []),
-      ];
+      ].filter(
+        (item) => showProgress || !['progress', 'completed', 'milestones'].includes(item.key),
+      );
       const summaryStep = 360 / summary.length;
       summary.forEach((item, index) => {
         const left = summaryLeft + index * summaryStep;
@@ -890,7 +913,7 @@ export function renderSvgPages(
       line(right, unitAxisY + 26, right, plotBottom, rule, { 'stroke-opacity': 0.35 });
     }
     let monthStart = timeline.start;
-    while (monthStart < timeline.end) {
+    while ((options.months ?? config.showMonths ?? true) && monthStart < timeline.end) {
       const relative = config.relativeTime ? relativeMonth(timeline.origin, monthStart) : undefined;
       const end = Math.min(relative ? relative.end : nextMonth(monthStart), timeline.end);
       const left = mapDate(monthStart);
@@ -949,7 +972,7 @@ export function renderSvgPages(
         const radius = ghost ? 10 : 8;
         shape('polygon', {
           points: `${left},${center - radius} ${left + radius},${center} ${left},${center + radius} ${left - radius},${center}`,
-          fill: ghost || !task.completed ? 'none' : color,
+          fill: ghost || !showProgress || !task.completed ? 'none' : color,
           stroke: ghost ? muted : color,
           'stroke-width': 1.6,
           ...(ghost ? { 'stroke-dasharray': '3 2', 'stroke-opacity': 0.6 } : {}),
@@ -981,7 +1004,7 @@ export function renderSvgPages(
           'stroke-width': ghost ? 1.2 : 0.6,
           ...(ghost ? { 'stroke-dasharray': '5 4', 'stroke-opacity': 0.6 } : {}),
         });
-        if (!ghost && task.progress > 0)
+        if (showProgress && !ghost && task.progress > 0)
           shape('rect', {
             x: left,
             y: center - barHeight / 2,
@@ -1161,11 +1184,13 @@ export function renderSvgPages(
       fill: PALETTE[0],
       'fill-opacity': 0.2,
     });
-    shape('rect', { x: margin, y: legendY - 9, width: 13, height: 10, rx: 2, fill: PALETTE[0] });
-    text(translate('planProgress'), margin + 36, legendY, 12, muted);
+    if (showProgress)
+      shape('rect', { x: margin, y: legendY - 9, width: 13, height: 10, rx: 2, fill: PALETTE[0] });
+    text(translate(showProgress ? 'planProgress' : 'task'), margin + 36, legendY, 12, muted);
     shape('polygon', {
       points: `${margin + 221},${legendY - 10} ${margin + 227},${legendY - 4} ${margin + 221},${legendY + 2} ${margin + 215},${legendY - 4}`,
-      fill: ink,
+      fill: showProgress ? ink : 'none',
+      ...(showProgress ? {} : { stroke: ink }),
     });
     text(translate('milestone'), margin + 238, legendY, 12, muted);
     if (diff) {
@@ -1288,7 +1313,7 @@ export function renderSvgPages(
     notesSvg ??= rendered.notesSvg;
     renderedPages.push({ page, svg: rendered.svg, width: rendered.width, height: rendered.height });
   }
-  return { pages: renderedPages, pageCount, changes, notesSvg };
+  return { pages: renderedPages, pageCount, changes: allChanges, notesSvg };
 }
 
 function markdownText(value: unknown) {
@@ -1320,8 +1345,9 @@ export function renderMarkdown(
     `${translate('comparison')}: ${markdownText(previousLabel ?? previous.version ?? translate('previous'))} -> ${markdownText(currentLabel ?? current.version ?? translate('current'))}`,
     '',
   ];
-  if (!changes.length) lines.push(translate('noChangesDetail'), '');
-  for (const change of changes) {
+  const displayedChanges = visibleChanges(changes, current.style.showProgress ?? true);
+  if (!displayedChanges.length) lines.push(translate('noChangesDetail'), '');
+  for (const change of displayedChanges) {
     lines.push(
       `## ${String(change.number).padStart(2, '0')} - ${markdownText(change.name)}`,
       '',

@@ -28,6 +28,12 @@ Pass `header: false` to `renderSvg` to omit the visible title, subtitle, summary
 const { svg } = renderSvg(current, { header: false });
 ```
 
+Set `timeline.showMonths: false` in a JSON/YAML plan to hide month labels and separator bars in both absolute and relative time. Months are visible by default. The render option `months` overrides the plan: `renderSvg(current, { months: false })` hides months, while `months: true` shows them. This also applies to every page returned by `renderSvgPages`. Weeks, time units and chart geometry are unchanged.
+
+Set `style.showProgress: false` to hide generated progress information in all chart pages and separate notes: task and group percentages and progress fills, header progress and completion counts, and milestone completion styling. Planned bars, group spans, dates and duration remain visible; milestones use hollow diamonds regardless of completion. The default is `true`.
+
+Progress/completion change details are also hidden in SVG notes and Markdown reports. Changes affecting only those fields are omitted from the displayed register unless they have a user note; original reference numbers are retained. User-authored text is not filtered. Input data, `comparePlans`, returned `changes` and JSON reports remain complete. This is a presentation option, not data redaction.
+
 ## Paginated Rendering
 
 `renderSvgPages` accepts `PaginatedRenderOptions`, which extends `RenderOptions` with `pageSize` and `pages`. Its `PaginatedRenderResult` contains `pages: RenderPage[]`, the total `pageCount` before selection, all `changes`, and a complete `notesSvg` for comparisons. Each page has `{ page, svg, width, height }`.

@@ -103,6 +103,8 @@ export default {
       'Optional fixed calendar-day unit. Defaults to duration 2w and name Sprint, including when either field is omitted.',
     duration:
       'Duration using d and w tokens, e.g. 5d, 2w, 1w 2d. Trimmed input must be at most 80 characters and total an integer 1..3660 days. No variable calendar months or other units. Validated by the application; default 2w.',
+    showMonths:
+      'Optional boolean, on by default. Shows month labels and separator bars in absolute and relative time. CLI --no-months hides them without changing weeks or time units.',
     showWeekNumbers:
       'Optional boolean, off by default. Adds ISO weeks below months, or origin-relative weeks when relativeTime is enabled. Dense labels are thinned.',
     relativeTime:
@@ -122,6 +124,8 @@ export default {
     theme:
       'Optional scalar; renderer accepts light or dark, default light. Both SVG themes are transparent.',
     font: 'Optional font-family value; rendering default Aptos, Segoe UI, sans-serif. Fonts are not embedded.',
+    showProgress:
+      'Optional boolean, on by default. Hides generated progress percentages, fills, completion indicators and progress change details in SVG and Markdown when false. Plan data, JSON reports and user text remain unchanged.',
     groupSummary:
       'Optional boolean, off by default. Shows current-group span and duration-weighted progress. Milestones affect span but not percentage. CLI group-summary/no-group-summary overrides it.',
     changeNotes:

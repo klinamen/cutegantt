@@ -141,6 +141,7 @@ const timelineFieldsSchema = object({
   granularity: z.never({ error: 'legacyTimeline' }).optional(),
   sprintWeeks: z.never({ error: 'legacyTimeline' }).optional(),
   timeUnit: timeUnitSchema.optional(),
+  showMonths: z.boolean().optional(),
   showWeekNumbers: z.boolean().optional(),
   truncateUnits: z.boolean().optional(),
   relativeTime: z.boolean().optional(),
@@ -200,6 +201,7 @@ export const styleSchema = object({
   theme: scalar,
   font: scalar,
   groupSummary: z.boolean().optional(),
+  showProgress: z.boolean().optional(),
   leftSideScale: z
     .string({ error: 'leftSideScale' })
     .regex(/^(?:(?:1\d|[2-4]\d)(?:\.\d+)?|50(?:\.0+)?)%$/, { error: 'leftSideScale' })
